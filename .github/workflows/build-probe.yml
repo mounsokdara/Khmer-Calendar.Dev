@@ -40,12 +40,14 @@ jobs:
           echo "build exit: $?" >> /tmp/build-report.txt
           grep -n "error:\|e: \|FAILURE\|What went wrong\|Execution failed\|Unresolved\|AAPT\|Error:" /tmp/build-report.txt | head -60 > /tmp/build-errors.txt
           tail -80 /tmp/build-report.txt >> /tmp/build-errors.txt
-      - name: Publish build report (ci-report-build branch)
+      - name: Publish build probe report (ci-reports/ on main)
         if: always()
         run: |
-          mkdir -p "$RUNNER_TEMP/rep" && cd "$RUNNER_TEMP/rep"
-          git init -q && git checkout -q -b ci-report-build
-          cp /tmp/build-errors.txt build-errors.txt 2>/dev/null || echo "no report" > build-errors.txt
-          git add build-errors.txt
-          git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -q -m "Build probe ${GITHUB_SHA::7}"
-          git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" ci-report-build
+          git config user.name ci && git config user.email ci@users.noreply.github.com
+          git fetch -q origin main
+          git checkout -q -B main origin/main
+          mkdir -p ci-reports
+          cp /tmp/build-errors.txt ci-reports/build-errors.txt 2>/dev/null || echo "no report produced" > ci-reports/build-errors.txt
+          git add ci-reports
+          git commit -q -m "ci: build probe report ${GITHUB_SHA::7} [skip ci]" || exit 0
+          for i in 1 2 3; do git push -q origin main && break; git pull -q --rebase origin main; done

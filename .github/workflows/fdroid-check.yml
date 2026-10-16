@@ -49,12 +49,14 @@ jobs:
           code=$?
           cat /tmp/report.txt
           exit $code
-      - name: Publish scan report (ci-report branch)
+      - name: Publish scan report (ci-reports/ on main)
         if: always()
         run: |
-          mkdir -p "$RUNNER_TEMP/rep" && cd "$RUNNER_TEMP/rep"
-          git init -q && git checkout -q -b ci-report
-          cp /tmp/report.txt report.txt 2>/dev/null || echo "no report produced" > report.txt
-          git add report.txt
-          git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -q -m "F-Droid check report ${GITHUB_SHA::7}"
-          git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" ci-report
+          git config user.name ci && git config user.email ci@users.noreply.github.com
+          git fetch -q origin main
+          git checkout -q -B main origin/main
+          mkdir -p ci-reports
+          cp /tmp/report.txt ci-reports/fdroid-report.txt 2>/dev/null || echo "no report produced" > ci-reports/fdroid-report.txt
+          git add ci-reports
+          git commit -q -m "ci: F-Droid check report ${GITHUB_SHA::7} [skip ci]" || exit 0
+          for i in 1 2 3; do git push -q origin main && break; git pull -q --rebase origin main; done

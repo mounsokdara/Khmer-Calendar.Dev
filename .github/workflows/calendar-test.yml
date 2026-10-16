@@ -45,12 +45,14 @@ jobs:
           } > /tmp/test-report.txt 2>&1
           cat /tmp/test-report.txt
           grep -q "test exit: 0" /tmp/test-report.txt && ! grep -q "^error" /tmp/test-report.txt
-      - name: Publish test report (ci-report branch)
+      - name: Publish test report (ci-reports/ on main)
         if: always()
         run: |
-          mkdir -p "$RUNNER_TEMP/rep" && cd "$RUNNER_TEMP/rep"
-          git init -q && git checkout -q -b ci-report-tests
-          cp /tmp/test-report.txt test-report.txt 2>/dev/null || echo "no report produced" > test-report.txt
-          git add test-report.txt
-          git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -q -m "Calendar test report ${GITHUB_SHA::7}"
-          git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" ci-report-tests
+          git config user.name ci && git config user.email ci@users.noreply.github.com
+          git fetch -q origin main
+          git checkout -q -B main origin/main
+          mkdir -p ci-reports
+          cp /tmp/test-report.txt ci-reports/test-report.txt 2>/dev/null || echo "no report produced" > ci-reports/test-report.txt
+          git add ci-reports
+          git commit -q -m "ci: test report ${GITHUB_SHA::7} [skip ci]" || exit 0
+          for i in 1 2 3; do git push -q origin main && break; git pull -q --rebase origin main; done
