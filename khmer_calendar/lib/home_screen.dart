@@ -130,7 +130,7 @@ Map<String, String> _dayNotifyFields(DateTime d, Lang lang, List<CalendarEvent> 
   };
 }
 
-/// Everything that does not depend on the user's events. It scans ~11 years of lunar days and
+/// Everything that does not depend on the user's events. It scans 1900-2100 for holiday and silday marks (the widget can page to any year) and
 /// holiday tables, so it must run in a background isolate (never on the UI thread).
 Map<String, Object> _staticWidgetIsolate(bool en) {
   final lang = en ? Lang.en : Lang.km;
@@ -162,7 +162,7 @@ Map<String, Object> _staticWidgetIsolate(bool en) {
     if (!cur.contains(f)) marks[day] = '$cur$f';
   }
 
-  for (var y = now.year - 5; y <= now.year + 5; y++) {
+  for (var y = 1900; y <= 2100; y++) {
     List<Observance> yearHols;
     try {
       yearHols = holidayObservancesOfYear(y);

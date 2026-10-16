@@ -470,14 +470,14 @@ Color todayOnFill(BuildContext context) {
   return cs.onPrimaryContainer;
 }
 
-/// Today's highlight must never hide a holiday: on a holiday (or Sunday) the filled circle
-/// takes the holiday colour instead of the generic "today" colour.
+/// Today's highlight keeps its own fill colour; the date number keeps its red (public holiday /
+/// Sunday) or blue (other observance) colour instead of switching to the highlight text colour.
 ({Color fill, Color onFill}) todayColors(BuildContext context, String tone) {
+  final fill = todayFill(context);
   if (tone == 'sunday' || tone == 'holiday') {
-    final fill = dayToneColor(context, tone);
-    return (fill: fill, onFill: fill.computeLuminance() < 0.45 ? Colors.white : const Color(0xFF1A1A1A));
+    return (fill: fill, onFill: dayToneColor(context, tone));
   }
-  return (fill: todayFill(context), onFill: todayOnFill(context));
+  return (fill: fill, onFill: todayOnFill(context));
 }
 
 Color dayToneColor(BuildContext context, String tone) {

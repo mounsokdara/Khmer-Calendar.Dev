@@ -19,12 +19,17 @@ class SlideSnackBar {
   SlideSnackBar._();
 
   static OverlayEntry? _entry;
-  static _SlideSnackBarHostState? _host;
+  // Every mounted host, oldest first. The newest one belongs to the page on top, so a snackbar
+  // always appears in the screen the user is looking at (a settings page, not the shell below it).
+  static final List<_SlideSnackBarHostState> _hosts = <_SlideSnackBarHostState>[];
+  static _SlideSnackBarHostState? get _host => _hosts.isEmpty ? null : _hosts.last;
 
   static void hide() {
     _entry?.remove();
     _entry = null;
-    _host?._clear();
+    for (final h in _hosts) {
+      h._clear();
+    }
   }
 
   static void show(
@@ -107,12 +112,12 @@ class _SlideSnackBarHostState extends State<SlideSnackBarHost> {
   @override
   void initState() {
     super.initState();
-    SlideSnackBar._host = this;
+    SlideSnackBar._hosts.add(this);
   }
 
   @override
   void dispose() {
-    if (SlideSnackBar._host == this) SlideSnackBar._host = null;
+    SlideSnackBar._hosts.remove(this);
     super.dispose();
   }
 

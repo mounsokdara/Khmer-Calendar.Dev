@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../custom_components/slide_snackbar.dart';
 import 'package:go_router/go_router.dart';
 
 import '../i18n.dart';
@@ -54,10 +56,12 @@ class OverlayScaffold extends StatelessWidget {
       ),
       body: SafeArea(
         top: false,
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: _maxContentWidth),
-            child: body,
+        child: SlideSnackBarHost(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: _maxContentWidth),
+              child: body,
+            ),
           ),
         ),
       ),

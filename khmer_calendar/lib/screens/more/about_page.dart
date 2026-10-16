@@ -83,7 +83,7 @@ class _AuthorCard extends StatelessWidget {
                       Text('@mounsokdara', style: TextStyle(color: cs.onSurfaceVariant)),
                       if (p != null && p.bio.isNotEmpty) ...[
                         const SizedBox(height: 4),
-                        Text(p.bio, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
+                        Text(p.bio, style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
                       ],
                       const SizedBox(height: 8),
                       Wrap(
