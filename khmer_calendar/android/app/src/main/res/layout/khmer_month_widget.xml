@@ -1,11 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/month_root"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@drawable/widget_background"
-    android:orientation="vertical"
-    android:padding="10dp">
+    android:layout_height="match_parent">
+
+    <ImageView
+        android:id="@+id/month_bg"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:contentDescription="@null"
+        android:scaleType="fitXY"
+        android:src="@drawable/widget_bg_shape" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="10dp">
+
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -20,9 +32,9 @@
             android:layout_weight="1"
             android:gravity="center"
             android:orientation="horizontal">
-            <TextView android:id="@+id/year_prev" android:layout_width="28dp" android:layout_height="32dp" android:clickable="true" android:focusable="true" android:gravity="center" android:text="‹" android:textColor="#FFFFFFFF" android:textSize="22sp" />
-            <TextView android:id="@+id/month_year" android:layout_width="wrap_content" android:layout_height="wrap_content" android:clickable="true" android:focusable="true" android:gravity="center" android:minWidth="48dp" android:text="2026" android:textColor="#FFFFFFFF" android:textSize="15sp" android:textStyle="bold" />
-            <TextView android:id="@+id/year_next" android:layout_width="28dp" android:layout_height="32dp" android:clickable="true" android:focusable="true" android:gravity="center" android:text="›" android:textColor="#FFFFFFFF" android:textSize="22sp" />
+            <TextView android:id="@+id/year_prev" android:layout_width="28dp" android:layout_height="32dp" android:clickable="true" android:focusable="true" android:gravity="center" android:text="‹" android:textSize="22sp" />
+            <TextView android:id="@+id/month_year" android:layout_width="wrap_content" android:layout_height="wrap_content" android:clickable="true" android:focusable="true" android:gravity="center" android:minWidth="48dp" android:text="2026" android:textSize="15sp" android:textStyle="bold" />
+            <TextView android:id="@+id/year_next" android:layout_width="28dp" android:layout_height="32dp" android:clickable="true" android:focusable="true" android:gravity="center" android:text="›" android:textSize="22sp" />
         </LinearLayout>
 
         <TextView
@@ -30,13 +42,11 @@
             android:layout_width="wrap_content"
             android:layout_height="28dp"
             android:layout_marginHorizontal="4dp"
-            android:background="@drawable/widget_today_chip"
             android:clickable="true"
             android:focusable="true"
             android:gravity="center"
             android:paddingHorizontal="10dp"
             android:text="ថ្ងៃនេះ"
-            android:textColor="#FFFFFFFF"
             android:textSize="12sp"
             android:textStyle="bold" />
 
@@ -46,9 +56,9 @@
             android:layout_weight="1"
             android:gravity="center"
             android:orientation="horizontal">
-            <TextView android:id="@+id/month_prev" android:layout_width="28dp" android:layout_height="32dp" android:clickable="true" android:focusable="true" android:gravity="center" android:text="‹" android:textColor="#FFFFFFFF" android:textSize="22sp" />
-            <TextView android:id="@+id/month_name" android:layout_width="wrap_content" android:layout_height="wrap_content" android:clickable="true" android:ellipsize="end" android:focusable="true" android:gravity="center" android:maxLines="1" android:minWidth="48dp" android:text="កញ្ញា" android:textColor="#FFFFFFFF" android:textSize="15sp" android:textStyle="bold" />
-            <TextView android:id="@+id/month_next" android:layout_width="28dp" android:layout_height="32dp" android:clickable="true" android:focusable="true" android:gravity="center" android:text="›" android:textColor="#FFFFFFFF" android:textSize="22sp" />
+            <TextView android:id="@+id/month_prev" android:layout_width="28dp" android:layout_height="32dp" android:clickable="true" android:focusable="true" android:gravity="center" android:text="‹" android:textSize="22sp" />
+            <TextView android:id="@+id/month_name" android:layout_width="wrap_content" android:layout_height="wrap_content" android:clickable="true" android:ellipsize="end" android:focusable="true" android:gravity="center" android:maxLines="1" android:minWidth="48dp" android:text="កញ្ញា" android:textSize="15sp" android:textStyle="bold" />
+            <TextView android:id="@+id/month_next" android:layout_width="28dp" android:layout_height="32dp" android:clickable="true" android:focusable="true" android:gravity="center" android:text="›" android:textSize="22sp" />
         </LinearLayout>
     </LinearLayout>
 
@@ -59,7 +69,6 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center"
-            android:textColor="#CCFFFFFF"
             android:textSize="11sp" />
         <TextView
             android:id="@id/head_1"
@@ -67,7 +76,6 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center"
-            android:textColor="#CCFFFFFF"
             android:textSize="11sp" />
         <TextView
             android:id="@id/head_2"
@@ -75,7 +83,6 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center"
-            android:textColor="#CCFFFFFF"
             android:textSize="11sp" />
         <TextView
             android:id="@id/head_3"
@@ -83,7 +90,6 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center"
-            android:textColor="#CCFFFFFF"
             android:textSize="11sp" />
         <TextView
             android:id="@id/head_4"
@@ -91,7 +97,6 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center"
-            android:textColor="#CCFFFFFF"
             android:textSize="11sp" />
         <TextView
             android:id="@id/head_5"
@@ -99,7 +104,6 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center"
-            android:textColor="#CCFFFFFF"
             android:textSize="11sp" />
         <TextView
             android:id="@id/head_6"
@@ -107,7 +111,6 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center"
-            android:textColor="#CCFFFFFF"
             android:textSize="11sp" />
     </LinearLayout>
     <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
@@ -125,7 +128,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_0"
@@ -152,7 +154,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_1"
@@ -179,7 +180,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_2"
@@ -206,7 +206,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_3"
@@ -233,7 +232,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_4"
@@ -260,7 +258,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_5"
@@ -287,7 +284,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_6"
@@ -316,7 +312,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_7"
@@ -343,7 +338,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_8"
@@ -370,7 +364,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_9"
@@ -397,7 +390,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_10"
@@ -424,7 +416,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_11"
@@ -451,7 +442,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_12"
@@ -478,7 +468,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_13"
@@ -507,7 +496,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_14"
@@ -534,7 +522,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_15"
@@ -561,7 +548,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_16"
@@ -588,7 +574,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_17"
@@ -615,7 +600,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_18"
@@ -642,7 +626,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_19"
@@ -669,7 +652,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_20"
@@ -698,7 +680,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_21"
@@ -725,7 +706,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_22"
@@ -752,7 +732,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_23"
@@ -779,7 +758,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_24"
@@ -806,7 +784,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_25"
@@ -833,7 +810,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_26"
@@ -860,7 +836,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_27"
@@ -889,7 +864,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_28"
@@ -916,7 +890,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_29"
@@ -943,7 +916,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_30"
@@ -970,7 +942,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_31"
@@ -997,7 +968,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_32"
@@ -1024,7 +994,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_33"
@@ -1051,7 +1020,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_34"
@@ -1080,7 +1048,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_35"
@@ -1107,7 +1074,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_36"
@@ -1134,7 +1100,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_37"
@@ -1161,7 +1126,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_38"
@@ -1188,7 +1152,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_39"
@@ -1215,7 +1178,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_40"
@@ -1242,7 +1204,6 @@
                 android:gravity="center_horizontal|top"
                 android:paddingTop="2dp"
                 android:maxLines="3"
-                android:textColor="#FFFFFFFF"
                 android:textSize="12sp" />
             <ImageView
                 android:id="@id/sil_41"
@@ -1256,4 +1217,5 @@
                 android:visibility="gone" />
         </FrameLayout>
     </LinearLayout>
-</LinearLayout>
+    </LinearLayout>
+</FrameLayout>

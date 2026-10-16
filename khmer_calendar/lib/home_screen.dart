@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' show Color, ColorScheme;
 import 'package:flutter/services.dart';
 
 import 'calendar/chhankitek.dart';
@@ -11,6 +12,7 @@ import 'i18n.dart';
 import 'net.dart';
 import 'notify/kinds.dart';
 import 'store.dart';
+import 'theme.dart';
 import 'weather.dart';
 import 'wx_cache.dart';
 
@@ -57,6 +59,33 @@ void applyWidgetLaunch(AppStore store, Object? raw) {
   final date = raw['date']?.toString() ?? '';
   if (tab.isEmpty && date.isEmpty) return;
   store.applyLaunch(tab: tab, date: date);
+}
+
+String _themeSig = '';
+
+/// Sends the app's Material 3 colours (both light and dark) plus the app's theme mode to the
+/// widgets, so they follow the app's colour scheme and light/dark setting.
+void syncWidgetTheme(AppStore store, ColorScheme light, ColorScheme dark) {
+  if (!canPinHomeWidget) return;
+  String hex(Color c) => '#${c.toARGB32().toRadixString(16).padLeft(8, '0')}';
+  String palette(ColorScheme cs, bool isDark) => jsonEncode({
+        'surface': hex(cs.surfaceContainer),
+        'onSurface': hex(cs.onSurface),
+        'onVariant': hex(cs.onSurfaceVariant),
+        'primary': hex(cs.primary),
+        'onPrimary': hex(cs.onPrimary),
+        'container': hex(cs.primaryContainer),
+        'onContainer': hex(cs.onPrimaryContainer),
+        'public': hex(publicHolidayFill),
+        'holiday': hex(isDark ? religiousColorOnDark : religiousColor),
+      });
+  final mode = store.theme == 'light' ? 'light' : (store.theme == 'dark' ? 'dark' : 'system');
+  final lightJson = palette(light, false);
+  final darkJson = palette(dark, true);
+  final sig = '$mode|$lightJson|$darkJson';
+  if (sig == _themeSig) return;
+  _themeSig = sig;
+  _ch.invokeMethod<void>('updateWidget', {'wp_light': lightJson, 'wp_dark': darkJson, 'wp_mode': mode}).catchError((_) {});
 }
 
 bool _syncBusy = false;
@@ -258,7 +287,9 @@ Future<Map<String, dynamic>> _buildWidgetDisplay(AppStore store) async {
   final lunar = lunarOf(now);
   final lunarText = lang == Lang.en ? lunarLabel(iso, lang) : lunar.lunarDateText;
   final hols = observancesOn(iso, events).where((e) => e.kind == Kind.holiday);
-  final holiday = hols.isEmpty ? '' : obsTitle(hols.first, lang);
+  final holiday = hols.isEmpty
+      ? ''
+      : obsTitle(hols.firstWhere((h) => h.holidayType == HolidayType.public, orElse: () => hols.first), lang);
 
   // Cheap per-event overlay on top of the cached static data.
   final marks = Map<String, String>.of(data.marks);
@@ -276,6 +307,10 @@ Future<Map<String, dynamic>> _buildWidgetDisplay(AppStore store) async {
     'weekday': weekdaysFull(lang)[now.weekday % 7],
     'lunar': lunarText,
     'holiday': holiday,
+    'hkind': hols.any((h) => h.holidayType == HolidayType.public) ? 'public' : (hols.isEmpty ? '' : 'other'),
+    'gregorian': lang == Lang.en
+        ? '${now.day} ${monthsEn[now.month - 1]} ${now.year} CE'
+        : '${lunar.gregorianDayText} ${lunar.gregorianMonthText} គ.ស ${lunar.gregorianYearText}',
     'title': t(lang, 'appName'),
     'days': data.daysJson,
     'marks': jsonEncode(marks),

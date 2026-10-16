@@ -86,6 +86,24 @@ class TodayWidgetProvider : AppWidgetProvider() {
                 views.setViewVisibility(R.id.widget_holiday, View.GONE)
             }
 
+            val greg = if (fresh) prefs.getString("gregorian", "") ?: "" else ""
+            if (greg.isNotEmpty()) {
+                views.setViewVisibility(R.id.widget_greg, View.VISIBLE)
+                views.setTextViewText(R.id.widget_greg, greg)
+            } else {
+                views.setViewVisibility(R.id.widget_greg, View.GONE)
+            }
+
+            val pal = WidgetTheme.load(context)
+            val holidayIsPublic = prefs.getString("hkind", "") == "public"
+            WidgetTheme.tint(context, views, pal, R.id.widget_bg) { it.surface }
+            WidgetTheme.text(context, views, pal, R.id.widget_title) { it.onVariant }
+            WidgetTheme.text(context, views, pal, R.id.widget_day) { it.primary }
+            WidgetTheme.text(context, views, pal, R.id.widget_weekday) { it.onSurface }
+            WidgetTheme.text(context, views, pal, R.id.widget_greg) { it.onSurface }
+            WidgetTheme.text(context, views, pal, R.id.widget_lunar) { it.onVariant }
+            WidgetTheme.text(context, views, pal, R.id.widget_holiday) { if (holidayIsPublic) it.publicDay else it.holiday }
+
             views.setOnClickPendingIntent(R.id.widget_root, WidgetStore.launch(context, "today"))
             return views
         }

@@ -7,6 +7,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 
 import 'haptics.dart';
+import 'home_screen.dart';
 import 'i18n.dart';
 import 'net.dart';
 import 'permissions.dart';
@@ -177,6 +178,9 @@ class _KhmerCalendarAppState extends State<KhmerCalendarApp> {
     final s = widget.store;
     return DynamicColorBuilder(
       builder: (lightDynamic, darkDynamic) {
+        final lightTheme = _theme(Brightness.light, extraDark: false, dynamicScheme: lightDynamic);
+        final darkTheme = _theme(Brightness.dark, extraDark: s.extraDark, dynamicScheme: darkDynamic);
+        syncWidgetTheme(s, lightTheme.colorScheme, darkTheme.colorScheme);
         return MaterialApp.router(
           title: s.lang == Lang.en ? 'Khmer Calendar' : 'ប្រតិទិនខ្មែរ',
           debugShowCheckedModeBanner: false,
@@ -188,8 +192,8 @@ class _KhmerCalendarAppState extends State<KhmerCalendarApp> {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
-          theme: _theme(Brightness.light, extraDark: false, dynamicScheme: lightDynamic),
-          darkTheme: _theme(Brightness.dark, extraDark: s.extraDark, dynamicScheme: darkDynamic),
+          theme: lightTheme,
+          darkTheme: darkTheme,
           themeMode: s.theme == 'light' ? ThemeMode.light : s.theme == 'dark' ? ThemeMode.dark : ThemeMode.system,
           routerConfig: router,
           builder: (context, child) {
