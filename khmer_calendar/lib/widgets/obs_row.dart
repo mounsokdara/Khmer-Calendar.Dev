@@ -70,7 +70,12 @@ class ObsRow extends StatelessWidget {
                   obsTitle(item, lang),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 16, height: 1.35),
+                  style: TextStyle(
+                    fontSize: 16,
+                    height: 1.35,
+                    decoration: item.done ? TextDecoration.lineThrough : null,
+                    color: item.done ? cs.onSurfaceVariant : null,
+                  ),
                 ),
               ),
             ],
