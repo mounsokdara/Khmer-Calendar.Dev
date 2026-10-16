@@ -77,6 +77,13 @@ class NotificationsPage extends StatelessWidget {
                     value: store.notifyTasks,
                     onChanged: (v) => toggle(v, store.setNotifyTasks),
                   ),
+                  SegmentedSwitch(
+                    icon: Icons.event_available_outlined,
+                    title: t(lang, 'remindTomorrow'),
+                    subtitle: t(lang, 'remindTomorrowSub'),
+                    value: store.notifyTomorrow,
+                    onChanged: (v) => toggle(v, store.setNotifyTomorrow),
+                  ),
                 ],
               ),
             ],

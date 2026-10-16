@@ -584,8 +584,9 @@ class _DayCell extends StatelessWidget {
     final lunar = lunarOf(day);
     final cs = Theme.of(context).colorScheme;
     final color = dayToneColor(context, tone);
-    final fill = isToday ? todayFill(context) : Colors.transparent;
-    final onFill = isToday ? todayOnFill(context) : null;
+    final todayStyle = isToday ? todayColors(context, tone) : null;
+    final fill = todayStyle?.fill ?? Colors.transparent;
+    final onFill = todayStyle?.onFill;
     return Material(
       color: Colors.transparent,
       child: InkWell(

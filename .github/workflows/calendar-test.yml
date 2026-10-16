@@ -1,0 +1,34 @@
+# Runs the calendar engine tests on the dev repo. Separate file: the release/android workflows are not touched.
+name: Calendar tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "khmer_calendar/lib/**"
+      - "khmer_calendar/test/**"
+      - "khmer_calendar/pubspec.yaml"
+      - ".github/workflows/calendar-test.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: calendar-test
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.4"
+          channel: stable
+          cache: true
+      - run: flutter pub get
+        working-directory: khmer_calendar
+      - run: flutter analyze --no-fatal-infos --no-fatal-warnings lib test
+        working-directory: khmer_calendar
+      - run: flutter test --reporter expanded
+        working-directory: khmer_calendar

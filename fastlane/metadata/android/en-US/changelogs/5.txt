@@ -1,0 +1,10 @@
+Khmer Calendar 1.0.4
+- Holidays and events now use one shared source everywhere (month, year, week, day, events, reminders, widgets)
+- Fixed holiday/event dates for older years
+- Year view now shows holiday colors
+- Today's highlight no longer hides the holiday color
+- Tomorrow's events and tasks reminder
+- Navigation bar follows the app theme instead of staying black
+- Improved widgets and About page
+- Vibration is only built into mobile and web builds
+- Per-ABI APKs (armeabi-v7a, arm64-v8a, x86_64) plus a universal APK

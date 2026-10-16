@@ -10,6 +10,9 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.provider.Settings
 import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
@@ -41,6 +44,10 @@ class MainActivity : FlutterActivity() {
                 }
                 "checkStatus" -> result.success(statusMap())
                 "isHapticFeedbackEnabled" -> result.success(isHapticFeedbackEnabled())
+                "vibrate" -> {
+                    vibrate(call.argument<Int>("duration") ?: 8, call.argument<Int>("amplitude") ?: 40)
+                    result.success(true)
+                }
                 "isIgnoringBattery" -> result.success(isIgnoringBattery())
                 "requestBatteryExemption" -> requestBatteryExemption(result)
                 "requestExactAlarm" -> requestExactAlarm(result)
@@ -73,6 +80,26 @@ class MainActivity : FlutterActivity() {
         Settings.System.getInt(contentResolver, Settings.System.HAPTIC_FEEDBACK_ENABLED, 0) != 0
     } catch (_: Settings.SettingNotFoundException) {
         false
+    }
+
+    private fun vibrate(duration: Int, amplitude: Int) {
+        try {
+            val v: Vibrator? = if (Build.VERSION.SDK_INT >= 31) {
+                getSystemService(VibratorManager::class.java)?.defaultVibrator
+            } else {
+                @Suppress("DEPRECATION")
+                getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+            }
+            if (v == null || !v.hasVibrator()) return
+            if (Build.VERSION.SDK_INT >= 26) {
+                val amp = if (v.hasAmplitudeControl()) amplitude.coerceIn(1, 255) else VibrationEffect.DEFAULT_AMPLITUDE
+                v.vibrate(VibrationEffect.createOneShot(duration.toLong(), amp))
+            } else {
+                @Suppress("DEPRECATION")
+                v.vibrate(duration.toLong())
+            }
+        } catch (_: Throwable) {
+        }
     }
 
     override fun onNewIntent(intent: Intent) {

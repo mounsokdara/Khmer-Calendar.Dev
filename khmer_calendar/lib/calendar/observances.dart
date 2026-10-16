@@ -297,20 +297,34 @@ String colorKind(Observance o) {
   return 'holiday';
 }
 
-bool isPublicHoliday(String iso) => holidaysOn(iso).any((h) => h.type == HolidayType.public);
+final _holidayTypeCache = <String, Set<HolidayType>>{};
 
-bool isObservanceHoliday(String iso) {
-  if (holidaysOn(iso).any(
-    (h) =>
-        h.type == HolidayType.religious ||
-        h.type == HolidayType.traditional ||
-        h.type == HolidayType.international,
-  )) {
-    return true;
-  }
+/// Every holiday type that falls on [iso], from the same sources [rangeObservances] uses
+/// (calendar holidays plus Kan Ben and Sen Kantong), so colours, lists, reminders and
+/// widgets can never disagree.
+Set<HolidayType> holidayTypesOn(String iso) {
+  final hit = _holidayTypeCache[iso];
+  if (hit != null) return hit;
+  final types = <HolidayType>{for (final h in holidaysOn(iso)) h.type};
   final y = fromIso(iso).year;
-  return kanBenOf(y).any((o) => o.date == iso) || senKantongOf(y).any((o) => o.date == iso);
+  if (kanBenOf(y).any((o) => o.date == iso) || senKantongOf(y).any((o) => o.date == iso)) {
+    types.add(HolidayType.traditional);
+  }
+  if (_holidayTypeCache.length > 4000) _holidayTypeCache.clear();
+  return _holidayTypeCache[iso] = types;
 }
+
+bool isPublicHoliday(String iso) => holidayTypesOn(iso).contains(HolidayType.public);
+
+bool isObservanceHoliday(String iso) => holidayTypesOn(iso).any((t) => t != HolidayType.public);
+
+/// The single holiday list for a day: deduplicated, with Kan Ben and Sen Kantong included.
+List<Observance> holidayObservancesOn(String iso) =>
+    observancesOn(iso, const []).where((o) => o.kind == Kind.holiday).toList();
+
+/// The single holiday list for a year, same rules as [holidayObservancesOn].
+List<Observance> holidayObservancesOfYear(int year) =>
+    yearObservances(year, const []).where((o) => o.kind == Kind.holiday).toList();
 
 String dayTone(String iso, bool inMonth) {
   if (!inMonth) return 'muted';

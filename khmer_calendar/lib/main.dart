@@ -1,6 +1,7 @@
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 
@@ -24,6 +25,7 @@ final store = AppStore();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   IntlHelper.localeName = WidgetsBinding.instance.platformDispatcher.locale.languageCode;
   await Future.wait([NetStatus.start(), Haptics.instance.init()]);
   runApp(KhmerCalendarApp(store: store));
@@ -182,6 +184,10 @@ class _KhmerCalendarAppState extends State<KhmerCalendarApp> {
           darkTheme: _theme(Brightness.dark, extraDark: s.extraDark, dynamicScheme: darkDynamic),
           themeMode: s.theme == 'light' ? ThemeMode.light : s.theme == 'dark' ? ThemeMode.dark : ThemeMode.system,
           routerConfig: router,
+          builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
+            value: systemBarStyle(Theme.of(context), Theme.of(context).colorScheme.surface),
+            child: child ?? const SizedBox.shrink(),
+          ),
         );
       },
     );

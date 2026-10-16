@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -230,6 +231,24 @@ class _YearBlock extends StatelessWidget {
   }
 }
 
+final _monthMarkCache = <int, ({Set<int> publicDays, Set<int> holidayDays})>{};
+
+({Set<int> publicDays, Set<int> holidayDays}) _monthHolidayMarks(DateTime month) {
+  return _monthMarkCache[month.year * 12 + month.month - 1] ??= () {
+    final pub = <int>{};
+    final hol = <int>{};
+    for (var d = 1; d <= daysInMonth(month); d++) {
+      final iso = isoOf(DateTime(month.year, month.month, d));
+      if (isPublicHoliday(iso)) {
+        pub.add(d);
+      } else if (isObservanceHoliday(iso)) {
+        hol.add(d);
+      }
+    }
+    return (publicDays: pub, holidayDays: hol);
+  }();
+}
+
 class _MiniMonth extends StatelessWidget {
   const _MiniMonth({
     required this.month,
@@ -253,6 +272,15 @@ class _MiniMonth extends StatelessWidget {
     final red = dayToneColor(context, 'sunday');
     final isThisMonth = today.year == month.year && today.month == month.month;
     final firstOffset = (((DateTime(month.year, month.month, 1).weekday % 7) - weekStartsOn) + 7) % 7;
+    final dayCount = daysInMonth(month);
+    final marks = _monthHolidayMarks(month);
+    final publicDays = marks.publicDays;
+    final holidayDays = marks.holidayDays;
+    final holidayColor = dayToneColor(context, 'holiday');
+    final todayTone = isThisMonth
+        ? (publicDays.contains(today.day) ? 'sunday' : holidayDays.contains(today.day) ? 'holiday' : 'default')
+        : 'default';
+    final todayStyle = todayColors(context, todayTone);
     return InkWell(
       borderRadius: BorderRadius.circular(8),
       onTap: () {
@@ -292,15 +320,18 @@ class _MiniMonth extends StatelessWidget {
               size: Size(double.infinity, rowH * 6),
               painter: _MiniGridPainter(
                 firstOffset: firstOffset,
-                days: daysInMonth(month),
+                days: dayCount,
+                publicDays: publicDays,
+                holidayDays: holidayDays,
+                holidayColor: holidayColor,
                 rowH: rowH,
                 fontSize: (rowH * 0.62).clamp(8.0, 13.0),
                 sunAt: sundayIndex(weekStartsOn),
                 todayDay: isThisMonth ? today.day : -1,
                 normal: cs.onSurface,
                 red: red,
-                fill: todayFill(context),
-                onFill: todayOnFill(context),
+                fill: todayStyle.fill,
+                onFill: todayStyle.onFill,
               ),
             ),
           ),
@@ -314,6 +345,9 @@ class _MiniGridPainter extends CustomPainter {
   const _MiniGridPainter({
     required this.firstOffset,
     required this.days,
+    required this.publicDays,
+    required this.holidayDays,
+    required this.holidayColor,
     required this.rowH,
     required this.fontSize,
     required this.sunAt,
@@ -326,6 +360,9 @@ class _MiniGridPainter extends CustomPainter {
 
   final int firstOffset;
   final int days;
+  final Set<int> publicDays;
+  final Set<int> holidayDays;
+  final Color holidayColor;
   final double rowH;
   final double fontSize;
   final int sunAt;
@@ -366,7 +403,14 @@ class _MiniGridPainter extends CustomPainter {
       final center = Offset((c + 0.5) * colW, (idx ~/ 7 + 0.5) * rowH);
       final isToday = d == todayDay;
       if (isToday) canvas.drawCircle(center, rowH / 2, circle);
-      final tp = _label(d, isToday ? onFill : (c == sunAt ? red : normal), fontSize, isToday);
+      final color = isToday
+          ? onFill
+          : publicDays.contains(d) || c == sunAt
+              ? red
+              : holidayDays.contains(d)
+                  ? holidayColor
+                  : normal;
+      final tp = _label(d, color, fontSize, isToday);
       tp.paint(canvas, center - Offset(tp.width / 2, tp.height / 2));
     }
   }
@@ -375,6 +419,9 @@ class _MiniGridPainter extends CustomPainter {
   bool shouldRepaint(covariant _MiniGridPainter o) =>
       o.firstOffset != firstOffset ||
       o.days != days ||
+      !setEquals(o.publicDays, publicDays) ||
+      !setEquals(o.holidayDays, holidayDays) ||
+      o.holidayColor != holidayColor ||
       o.rowH != rowH ||
       o.fontSize != fontSize ||
       o.sunAt != sunAt ||
@@ -611,7 +658,9 @@ class _WeekDayRow extends StatelessWidget {
     final isToday = iso == todayIso();
     final selected = iso == store.selected;
     final lunar = lunarOf(day);
-    final tone = dayToneColor(context, dayTone(iso, true));
+    final toneId = dayTone(iso, true);
+    final tone = dayToneColor(context, toneId);
+    final todayStyle = isToday ? todayColors(context, toneId) : null;
     final lunarText = lang == Lang.en
         ? '${silPhaseLabel(lunar, lang)} · ${monthEn[lunar.khmerMonth] ?? lunar.khmerMonth}'
         : '${silPhaseLabel(lunar, lang)} ខែ${lunar.khmerMonth}';
@@ -657,13 +706,13 @@ class _WeekDayRow extends StatelessWidget {
                         width: 38,
                         height: 38,
                         alignment: Alignment.center,
-                        decoration: isToday ? BoxDecoration(color: todayFill(context), shape: BoxShape.circle) : null,
+                        decoration: todayStyle != null ? BoxDecoration(color: todayStyle.fill, shape: BoxShape.circle) : null,
                         child: Text(
                           '${day.day}',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w600,
-                            color: isToday ? todayOnFill(context) : tone,
+                            color: todayStyle?.onFill ?? tone,
                           ),
                         ),
                       ),

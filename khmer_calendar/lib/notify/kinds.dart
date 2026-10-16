@@ -31,6 +31,7 @@ const reminderKinds = <ReminderKind>[
   PublicHolidayReminder(),
   OtherHolidayReminder(),
   TaskReminder(),
+  TomorrowReminder(),
 ];
 
 String silPhaseLabel(LunarDay info, Lang lang) {
@@ -56,9 +57,8 @@ String dayNotifyBody(DateTime day, AppStore store) {
   if (info.isSilDay && store.notifySil) {
     lines.add('${t(lang, 'silDay')} (${silPhaseLabel(info, lang)})');
   }
-  for (final h in holidaysOn(iso)) {
-    final name = lang == Lang.en ? h.nameEn : h.nameKm;
-    lines.add('${holidayTypeLabel(h.type, lang)}: $name');
+  for (final h in holidayObservancesOn(iso)) {
+    lines.add('${holidayTypeLabel(h.holidayType ?? HolidayType.traditional, lang)}: ${obsTitle(h, lang)}');
   }
   final tasks = store.events.where((e) => e.date == iso && e.done != true).toList();
   if (tasks.isNotEmpty) {
@@ -224,6 +224,62 @@ class TaskReminder extends ReminderKind {
   }
 }
 
+class TomorrowReminder extends ReminderKind {
+  const TomorrowReminder();
+
+  static const _hour = 20;
+  static const _days = 45;
+
+  @override
+  bool enabled(AppStore store) => store.notifyTomorrow;
+
+  @override
+  bool get nativeAndroid => true;
+
+  @override
+  List<ReminderShot> collect(AppStore store, DateTime now) {
+    final lang = store.lang;
+    final out = <ReminderShot>[];
+    final first = DateTime(now.year, now.month, now.day);
+    for (var i = 0; i <= _days; i++) {
+      final target = addDays(first, i + 1);
+      final when = DateTime(target.year, target.month, target.day - 1, _hour);
+      if (!when.isAfter(now)) continue;
+      final iso = isoOf(target);
+      final lines = _tomorrowLines(store, target, iso, lang);
+      if (lines.isEmpty) continue;
+      out.add(
+        ReminderShot(
+          'tomorrow-$iso',
+          t(lang, 'notifyTomorrowTitle'),
+          '',
+          when,
+          channel: 'tasks',
+          bodyOf: () => [calendarDetail(target, lang), ..._tomorrowLines(store, target, iso, lang)].join('\n'),
+        ),
+      );
+    }
+    return out;
+  }
+}
+
+List<String> _tomorrowLines(AppStore store, DateTime day, String iso, Lang lang) {
+  final lines = <String>[];
+  for (final h in holidayObservancesOn(iso)) {
+    lines.add('${holidayTypeLabel(h.holidayType ?? HolidayType.traditional, lang)}: ${obsTitle(h, lang)}');
+  }
+  for (final e in store.events) {
+    if (e.done == true || e.date.isEmpty) continue;
+    final start = fromIso(e.date);
+    var end = fromIso(e.endDate ?? e.date);
+    if (end.isBefore(start)) end = start;
+    if (day.isBefore(start) || day.isAfter(end)) continue;
+    final clock = e.allDay == true ? '' : (e.startTime ?? '');
+    lines.add(clock.isEmpty ? e.title : '$clock ${e.title}');
+  }
+  return lines;
+}
+
 ReminderShot? _taskShot(
   AppStore store,
   Lang lang,
@@ -356,7 +412,7 @@ List<Map<String, String>> upcomingHolidays(HolidayType type) {
   final key = '${_horizonKey()}|${type.name}';
   final hit = _typeCache[key];
   if (hit != null) return hit;
-  final out = _upcomingHolidayMaps((h) => h.type == type);
+  final out = _upcomingHolidayMaps((t) => t == type);
   _typeCache[key] = out;
   return out;
 }
@@ -364,49 +420,32 @@ List<Map<String, String>> upcomingHolidays(HolidayType type) {
 List<Map<String, String>> upcomingOtherHolidays() {
   final key = _horizonKey();
   if (_otherCache != null && _otherKey == key) return _otherCache!;
-  final out = _upcomingHolidayMaps(
-    (h) =>
-        h.type == HolidayType.religious ||
-        h.type == HolidayType.traditional ||
-        h.type == HolidayType.international,
-  );
-  final now = DateTime.now();
-  final today = isoOf(DateTime(now.year, now.month, now.day));
-  final seen = {for (final h in out) '${h['d']}-${h['km']}'};
-  void addObs(Observance o) {
-    if (o.date.compareTo(today) < 0) return;
-    final k = '${o.date}-${o.title}';
-    if (!seen.add(k)) return;
-    out.add({'d': o.date, 'km': o.title, 'en': o.titleEn, 'type': 'traditional'});
-  }
-  for (var y = now.year; y <= notifyEndYear(now); y++) {
-    kanBenOf(y).forEach(addObs);
-    senKantongOf(y).forEach(addObs);
-  }
+  final out = _upcomingHolidayMaps((type) => type != HolidayType.public);
   out.sort((a, b) => a['d']!.compareTo(b['d']!));
   _otherKey = key;
   _otherCache = out;
   return out;
 }
 
-List<Map<String, String>> _upcomingHolidayMaps(bool Function(Holiday h) keep) {
+List<Map<String, String>> _upcomingHolidayMaps(bool Function(HolidayType type) keep) {
   final now = DateTime.now();
   final today = isoOf(DateTime(now.year, now.month, now.day));
   final out = <Map<String, String>>[];
   final seen = <String>{};
   for (var y = now.year; y <= notifyEndYear(now); y++) {
-    List<Holiday> list;
+    List<Observance> list;
     try {
-      list = holidaysOfYear(y);
+      list = holidayObservancesOfYear(y);
     } catch (_) {
       continue;
     }
     for (final h in list) {
-      if (!keep(h)) continue;
+      final type = h.holidayType;
+      if (type == null || !keep(type)) continue;
       if (h.date.compareTo(today) < 0) continue;
-      final key = '${h.date}-${h.nameKm}';
+      final key = '${h.date}-${h.title}';
       if (!seen.add(key)) continue;
-      out.add({'d': h.date, 'km': h.nameKm, 'en': h.nameEn, 'type': h.type.name});
+      out.add({'d': h.date, 'km': h.title, 'en': h.titleEn, 'type': type.name});
     }
   }
   return out;

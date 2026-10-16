@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:vibration/vibration.dart';
 
 import 'haptics_platform.dart';
 
@@ -71,10 +70,13 @@ class Haptics {
     }
 
     try {
-      if (await Vibration.hasVibrator() != true) return;
-      await Vibration.vibrate(duration: duration, amplitude: amplitude);
-    } catch (_) {
-
-    }
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        await _channel.invokeMethod<bool>('vibrate', {'duration': duration, 'amplitude': amplitude});
+      } else if (duration > 15) {
+        await HapticFeedback.heavyImpact();
+      } else {
+        await HapticFeedback.selectionClick();
+      }
+    } catch (_) {}
   }
 }

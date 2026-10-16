@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../custom_components/slide_snackbar.dart';
@@ -97,7 +98,10 @@ class _ShellBodyState extends State<_ShellBody> {
       );
     }
 
-    return Scaffold(
+    final theme = Theme.of(context);
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: systemBarStyle(theme, theme.colorScheme.surfaceContainer),
+      child: Scaffold(
       body: SafeArea(
         child: host,
       ),
@@ -113,6 +117,6 @@ class _ShellBodyState extends State<_ShellBody> {
             ),
         ],
       ),
-    );
+    ));
   }
 }

@@ -250,7 +250,7 @@ Future<void> _scheduleNative(ReminderShot shot, int id, bool exact) async {
 }
 
 String _reminderSignature(AppStore store) =>
-    '${store.notifyOn}|${store.notifyDaily}|${store.notifySil}|${store.notifyPublic}|${store.notifyOthers}|${store.notifyTasks}|${store.backgroundOn}|${store.lang}|${store.events.map((e) => '${e.id}:${e.date}:${e.endDate}:${e.startTime}:${e.reminderDate}:${e.reminderTime}:${e.done}').join(',')}';
+    '${store.notifyOn}|${store.notifyDaily}|${store.notifySil}|${store.notifyPublic}|${store.notifyOthers}|${store.notifyTasks}|${store.notifyTomorrow}|${store.backgroundOn}|${store.lang}|${store.events.map((e) => '${e.id}:${e.date}:${e.endDate}:${e.startTime}:${e.reminderDate}:${e.reminderTime}:${e.done}').join(',')}';
 
 List<ReminderShot> _pluginPending(List<ReminderShot> shots) {
   final now = DateTime.now();

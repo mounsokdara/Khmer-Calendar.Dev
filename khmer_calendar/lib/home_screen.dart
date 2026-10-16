@@ -163,23 +163,15 @@ Map<String, Object> _staticWidgetIsolate(bool en) {
   }
 
   for (var y = now.year - 5; y <= now.year + 5; y++) {
-    List<Holiday> yearHols;
+    List<Observance> yearHols;
     try {
-      yearHols = holidaysOfYear(y);
+      yearHols = holidayObservancesOfYear(y);
     } catch (_) {
       continue;
     }
     for (final h in yearHols) {
-      if (h.type == HolidayType.public) {
-        flag(h.date, 'p');
-      } else {
-        flag(h.date, 'h');
-      }
-      names.putIfAbsent(h.date, () => lang == Lang.en ? h.nameEn : h.nameKm);
-    }
-    for (final o in [...kanBenOf(y), ...senKantongOf(y)]) {
-      flag(o.date, 'h');
-      names.putIfAbsent(o.date, () => obsTitle(o, lang));
+      flag(h.date, h.holidayType == HolidayType.public ? 'p' : 'h');
+      names.putIfAbsent(h.date, () => obsTitle(h, lang));
     }
     var d = DateTime(y, 1, 1);
     final last = DateTime(y, 12, 31);

@@ -117,6 +117,7 @@ class AppStore extends ChangeNotifier {
   bool locationOn = false;
   bool autoLaunchOn = false;
   bool notifyTasks = true;
+  bool notifyTomorrow = true;
   bool notifyDaily = false;
   bool notifySil = true;
   bool notifyPublic = true;
@@ -177,6 +178,7 @@ class AppStore extends ChangeNotifier {
         locationOn = p['locationOn'] as bool? ?? false;
         autoLaunchOn = p['autoLaunchOn'] as bool? ?? false;
         notifyTasks = p['notifyTasks'] as bool? ?? true;
+        notifyTomorrow = p['notifyTomorrow'] as bool? ?? true;
         notifyDaily = p['notifyDaily'] as bool? ?? false;
         notifySil = p['notifySil'] as bool? ?? true;
         final oldHolidays = p['notifyHolidays'] as bool? ?? true;
@@ -232,6 +234,7 @@ class AppStore extends ChangeNotifier {
         'locationOn': locationOn,
         'autoLaunchOn': autoLaunchOn,
         'notifyTasks': notifyTasks,
+        'notifyTomorrow': notifyTomorrow,
         'notifyDaily': notifyDaily,
         'notifySil': notifySil,
         'notifyPublic': notifyPublic,
@@ -445,6 +448,12 @@ class AppStore extends ChangeNotifier {
     _touch();
   }
 
+  void setNotifyTomorrow(bool v) {
+    if (notifyTomorrow == v) return;
+    notifyTomorrow = v;
+    _touch();
+  }
+
   void setNotifyTasks(bool v) {
     if (notifyTasks == v) return;
     notifyTasks = v;
@@ -517,6 +526,7 @@ class AppStore extends ChangeNotifier {
     locationOn = false;
     autoLaunchOn = false;
     notifyTasks = true;
+    notifyTomorrow = true;
     notifyDaily = false;
     notifySil = true;
     notifyPublic = true;

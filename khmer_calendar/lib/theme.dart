@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 enum ColorSchemeId {
   rose,
@@ -423,8 +424,8 @@ const mediumBreak = 720.0;
 const xlBreak = 1180.0;
 
 // Keep in sync with `version:` in pubspec.yaml (test/version_sync_test.dart enforces it).
-const appVersion = '1.0.3';
-const appBuildNumber = 4;
+const appVersion = '1.0.4';
+const appBuildNumber = 5;
 const appAuthor = 'Moun Sokdara';
 const appSourceUrl = 'https://github.com/mounsokdara/Khmer-Calendar';
 const appWebsiteUrl = 'https://khmercalendar.pages.dev';
@@ -469,6 +470,16 @@ Color todayOnFill(BuildContext context) {
   return cs.onPrimaryContainer;
 }
 
+/// Today's highlight must never hide a holiday: on a holiday (or Sunday) the filled circle
+/// takes the holiday colour instead of the generic "today" colour.
+({Color fill, Color onFill}) todayColors(BuildContext context, String tone) {
+  if (tone == 'sunday' || tone == 'holiday') {
+    final fill = dayToneColor(context, tone);
+    return (fill: fill, onFill: fill.computeLuminance() < 0.45 ? Colors.white : const Color(0xFF1A1A1A));
+  }
+  return (fill: todayFill(context), onFill: todayOnFill(context));
+}
+
 Color dayToneColor(BuildContext context, String tone) {
   final cs = Theme.of(context).colorScheme;
   switch (tone) {
@@ -485,4 +496,18 @@ Color dayToneColor(BuildContext context, String tone) {
     default:
       return cs.onSurface;
   }
+}
+
+SystemUiOverlayStyle systemBarStyle(ThemeData theme, Color navColor) {
+  final dark = theme.brightness == Brightness.dark;
+  final icons = dark ? Brightness.light : Brightness.dark;
+  return SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: icons,
+    statusBarBrightness: dark ? Brightness.dark : Brightness.light,
+    systemNavigationBarColor: navColor,
+    systemNavigationBarDividerColor: Colors.transparent,
+    systemNavigationBarIconBrightness: icons,
+    systemNavigationBarContrastEnforced: false,
+  );
 }
