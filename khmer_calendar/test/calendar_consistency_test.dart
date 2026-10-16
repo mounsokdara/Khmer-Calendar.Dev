@@ -149,4 +149,15 @@ void main() {
     }
     expect(problems, isEmpty, reason: problems.take(60).join('\n'));
   });
+
+  test('PROBE engine values 2008-2030', () {
+    final rows = <String>[];
+    for (var y = 2008; y <= 2030; y++) {
+      final h = holidaysOfYear(y);
+      String first(String n) => h.where((x) => x.nameEn == n).map((x) => x.date.substring(5)).join('/');
+      final ny = h.where((x) => x.nameEn.startsWith('Khmer New Year')).map((x) => x.date.substring(5)).join(',');
+      rows.add('$y cw=${debugYearType(y)} ${debugYearTypeName(y)} jan1=${lunarOf(DateTime(y, 1, 1)).khmerMonth} NY=$ny Meak=${first('Meak Bochea')} Visak=${first('Visak Bochea Day')} Pchum=${first('Pchum Ben')} Water=${first('Water Festival')}');
+    }
+    fail(rows.join('\n'));
+  });
 }
