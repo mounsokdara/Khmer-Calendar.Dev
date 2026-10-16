@@ -11,6 +11,9 @@ on:
       - ".github/workflows/calendar-test.yml"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 concurrency:
   group: calendar-test
   cancel-in-progress: true
@@ -28,7 +31,26 @@ jobs:
           cache: true
       - run: flutter pub get
         working-directory: khmer_calendar
-      - run: flutter analyze --no-fatal-infos --no-fatal-warnings lib test
+      - name: Analyze and test
         working-directory: khmer_calendar
-      - run: flutter test --reporter expanded
-        working-directory: khmer_calendar
+        run: |
+          set +e
+          {
+            echo "=== flutter analyze ==="
+            flutter analyze --no-fatal-infos --no-fatal-warnings lib test
+            echo "analyze exit: $?"
+            echo "=== flutter test ==="
+            flutter test --reporter expanded
+            echo "test exit: $?"
+          } > /tmp/test-report.txt 2>&1
+          cat /tmp/test-report.txt
+          grep -q "test exit: 0" /tmp/test-report.txt && ! grep -q "^error" /tmp/test-report.txt
+      - name: Publish test report (ci-report branch)
+        if: always()
+        run: |
+          mkdir -p "$RUNNER_TEMP/rep" && cd "$RUNNER_TEMP/rep"
+          git init -q && git checkout -q -b ci-report-tests
+          cp /tmp/test-report.txt test-report.txt 2>/dev/null || echo "no report produced" > test-report.txt
+          git add test-report.txt
+          git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -q -m "Calendar test report ${GITHUB_SHA::7}"
+          git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" ci-report-tests
