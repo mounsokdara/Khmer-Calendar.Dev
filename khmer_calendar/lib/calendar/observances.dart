@@ -16,7 +16,6 @@ class Observance {
     required this.kind,
     this.holidayType,
     this.eventId,
-    this.done = false,
   });
 
   final String id;
@@ -28,7 +27,6 @@ class Observance {
   final Kind kind;
   final HolidayType? holidayType;
   final String? eventId;
-  final bool done;
 }
 
 final _kanCache = <int, List<Observance>>{};
@@ -139,7 +137,6 @@ List<Observance> _buildEventObservances(List<CalendarEvent> events) {
         subtitleEn: n.startTime != null && n.allDay != true ? n.startTime : '',
         kind: Kind.event,
         eventId: n.id,
-        done: n.done == true,
       ));
       continue;
     }
@@ -163,7 +160,6 @@ List<Observance> _buildEventObservances(List<CalendarEvent> events) {
         subtitleEn: subEn,
         kind: Kind.event,
         eventId: n.id,
-        done: n.done == true,
       ));
     }
   }

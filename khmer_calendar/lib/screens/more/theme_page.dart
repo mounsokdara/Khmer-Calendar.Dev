@@ -59,6 +59,14 @@ class ThemePage extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
                 children: [
                   SegmentedSwitch(
+                    icon: Icons.format_color_text,
+                    title: t(lang, 'textStroke'),
+                    subtitle: t(lang, 'textStrokeSub'),
+                    value: store.textStroke,
+                    compact: true,
+                    onChanged: store.setTextStroke,
+                  ),
+                  SegmentedSwitch(
                     icon: Icons.wallpaper,
                     title: t(lang, 'dynamicColor'),
                     subtitle: t(lang, 'dynamicColorSub'),

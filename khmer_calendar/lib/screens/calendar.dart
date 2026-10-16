@@ -7,6 +7,7 @@ import '../dates.dart';
 import '../haptics.dart';
 import '../i18n.dart';
 import '../store.dart';
+import '../widgets/stroke_text.dart';
 import '../theme.dart';
 import '../widgets/carousel_slider.dart';
 import '../widgets/holiday_info.dart';
@@ -625,7 +626,7 @@ class _DayCell extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          Text(
+                          StrokeText(
                             lunar.moonDayKhmer,
                             textAlign: TextAlign.center,
                             style: TextStyle(
@@ -634,7 +635,7 @@ class _DayCell extends StatelessWidget {
                               height: 1.1,
                             ),
                           ),
-                          Text(
+                          StrokeText(
                             '${day.day}',
                             textAlign: TextAlign.center,
                             style: TextStyle(
@@ -646,7 +647,7 @@ class _DayCell extends StatelessWidget {
                             ),
                           ),
                           if (!expanded)
-                            Text(
+                            StrokeText(
                               lunar.khmerMonth,
                               textAlign: TextAlign.center,
                               maxLines: 1,

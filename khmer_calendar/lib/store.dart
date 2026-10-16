@@ -118,6 +118,7 @@ class AppStore extends ChangeNotifier {
   bool autoLaunchOn = false;
   bool notifyTasks = true;
   bool notifyTomorrow = true;
+  bool textStroke = true;
   bool tomorrowTasks = true;
   bool tomorrowHolidays = true;
   bool tomorrowLunar = true;
@@ -182,6 +183,7 @@ class AppStore extends ChangeNotifier {
         autoLaunchOn = p['autoLaunchOn'] as bool? ?? false;
         notifyTasks = p['notifyTasks'] as bool? ?? true;
         notifyTomorrow = p['notifyTomorrow'] as bool? ?? true;
+        textStroke = p['textStroke'] as bool? ?? true;
         tomorrowTasks = p['tomorrowTasks'] as bool? ?? true;
         tomorrowHolidays = p['tomorrowHolidays'] as bool? ?? true;
         tomorrowLunar = p['tomorrowLunar'] as bool? ?? true;
@@ -241,6 +243,7 @@ class AppStore extends ChangeNotifier {
         'autoLaunchOn': autoLaunchOn,
         'notifyTasks': notifyTasks,
         'notifyTomorrow': notifyTomorrow,
+        'textStroke': textStroke,
         'tomorrowTasks': tomorrowTasks,
         'tomorrowHolidays': tomorrowHolidays,
         'tomorrowLunar': tomorrowLunar,
@@ -457,6 +460,12 @@ class AppStore extends ChangeNotifier {
     _touch();
   }
 
+  void setTextStroke(bool v) {
+    if (textStroke == v) return;
+    textStroke = v;
+    _touch();
+  }
+
   void setTomorrowTasks(bool v) {
     if (tomorrowTasks == v) return;
     tomorrowTasks = v;
@@ -554,6 +563,7 @@ class AppStore extends ChangeNotifier {
     autoLaunchOn = false;
     notifyTasks = true;
     notifyTomorrow = true;
+    textStroke = true;
     tomorrowTasks = true;
     tomorrowHolidays = true;
     tomorrowLunar = true;

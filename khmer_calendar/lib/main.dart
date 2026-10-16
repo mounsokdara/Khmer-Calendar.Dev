@@ -21,6 +21,7 @@ import 'screens/splash.dart';
 import 'screens/today.dart';
 import 'screens/weather_page.dart';
 import 'store.dart';
+import 'widgets/stroke_text.dart';
 import 'theme.dart';
 
 final store = AppStore();
@@ -191,10 +192,13 @@ class _KhmerCalendarAppState extends State<KhmerCalendarApp> {
           darkTheme: _theme(Brightness.dark, extraDark: s.extraDark, dynamicScheme: darkDynamic),
           themeMode: s.theme == 'light' ? ThemeMode.light : s.theme == 'dark' ? ThemeMode.dark : ThemeMode.system,
           routerConfig: router,
-          builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
+          builder: (context, child) {
+            StrokeText.enabled = widget.store.textStroke;
+            return AnnotatedRegion<SystemUiOverlayStyle>(
             value: systemBarStyle(Theme.of(context), Theme.of(context).colorScheme.surface),
             child: child ?? const SizedBox.shrink(),
-          ),
+          );
+          },
         );
       },
     );
