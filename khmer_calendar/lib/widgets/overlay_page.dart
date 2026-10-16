@@ -52,10 +52,13 @@ class OverlayScaffold extends StatelessWidget {
         ),
         actions: actions,
       ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: _maxContentWidth),
-          child: body,
+      body: SafeArea(
+        top: false,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: _maxContentWidth),
+            child: body,
+          ),
         ),
       ),
     );

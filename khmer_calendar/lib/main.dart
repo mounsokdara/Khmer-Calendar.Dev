@@ -1,3 +1,4 @@
+import 'dart:ui' show PlatformDispatcher;
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -12,6 +13,7 @@ import 'permissions.dart';
 import 'screens/events.dart';
 import 'screens/licenses.dart';
 import 'screens/more.dart';
+import 'screens/more/privacy_policy_page.dart';
 import 'screens/calendar.dart';
 import 'screens/setup.dart';
 import 'screens/shell.dart';
@@ -48,6 +50,10 @@ class _KhmerCalendarAppState extends State<KhmerCalendarApp> {
   void initState() {
     super.initState();
     widget.store.addListener(_onStore);
+    final launchRoute = PlatformDispatcher.instance.defaultRouteName;
+    if (launchRoute.startsWith('/') && launchRoute != '/' && launchRoute != '/splash') {
+      widget.store.pendingRoute = launchRoute;
+    }
     router = GoRouter(
       refreshListenable: widget.store.routerTick,
       initialLocation: '/splash',
@@ -94,6 +100,7 @@ class _KhmerCalendarAppState extends State<KhmerCalendarApp> {
         GoRoute(path: '/settings/privacy', builder: (_, _) => PrivacyPage(store: widget.store)),
         GoRoute(path: '/settings/clear', builder: (_, _) => ClearPage(store: widget.store)),
         GoRoute(path: '/about', builder: (_, _) => AboutPage(store: widget.store)),
+        GoRoute(path: '/privacy-policy', builder: (_, _) => PrivacyPolicyPage(store: widget.store)),
         GoRoute(
           path: '/license',
           builder: (_, _) => OssLicensePage(store: widget.store),

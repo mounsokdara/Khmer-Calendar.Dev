@@ -118,6 +118,9 @@ class AppStore extends ChangeNotifier {
   bool autoLaunchOn = false;
   bool notifyTasks = true;
   bool notifyTomorrow = true;
+  bool tomorrowTasks = true;
+  bool tomorrowHolidays = true;
+  bool tomorrowLunar = true;
   bool notifyDaily = false;
   bool notifySil = true;
   bool notifyPublic = true;
@@ -179,6 +182,9 @@ class AppStore extends ChangeNotifier {
         autoLaunchOn = p['autoLaunchOn'] as bool? ?? false;
         notifyTasks = p['notifyTasks'] as bool? ?? true;
         notifyTomorrow = p['notifyTomorrow'] as bool? ?? true;
+        tomorrowTasks = p['tomorrowTasks'] as bool? ?? true;
+        tomorrowHolidays = p['tomorrowHolidays'] as bool? ?? true;
+        tomorrowLunar = p['tomorrowLunar'] as bool? ?? true;
         notifyDaily = p['notifyDaily'] as bool? ?? false;
         notifySil = p['notifySil'] as bool? ?? true;
         final oldHolidays = p['notifyHolidays'] as bool? ?? true;
@@ -235,6 +241,9 @@ class AppStore extends ChangeNotifier {
         'autoLaunchOn': autoLaunchOn,
         'notifyTasks': notifyTasks,
         'notifyTomorrow': notifyTomorrow,
+        'tomorrowTasks': tomorrowTasks,
+        'tomorrowHolidays': tomorrowHolidays,
+        'tomorrowLunar': tomorrowLunar,
         'notifyDaily': notifyDaily,
         'notifySil': notifySil,
         'notifyPublic': notifyPublic,
@@ -448,6 +457,24 @@ class AppStore extends ChangeNotifier {
     _touch();
   }
 
+  void setTomorrowTasks(bool v) {
+    if (tomorrowTasks == v) return;
+    tomorrowTasks = v;
+    _touch();
+  }
+
+  void setTomorrowHolidays(bool v) {
+    if (tomorrowHolidays == v) return;
+    tomorrowHolidays = v;
+    _touch();
+  }
+
+  void setTomorrowLunar(bool v) {
+    if (tomorrowLunar == v) return;
+    tomorrowLunar = v;
+    _touch();
+  }
+
   void setNotifyTomorrow(bool v) {
     if (notifyTomorrow == v) return;
     notifyTomorrow = v;
@@ -527,6 +554,9 @@ class AppStore extends ChangeNotifier {
     autoLaunchOn = false;
     notifyTasks = true;
     notifyTomorrow = true;
+    tomorrowTasks = true;
+    tomorrowHolidays = true;
+    tomorrowLunar = true;
     notifyDaily = false;
     notifySil = true;
     notifyPublic = true;

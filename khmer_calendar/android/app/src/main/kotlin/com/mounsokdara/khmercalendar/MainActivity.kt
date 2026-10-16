@@ -20,7 +20,7 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.util.concurrent.Executors
 
-class MainActivity : FlutterActivity() {
+open class MainActivity : FlutterActivity() {
     private var pending: MethodChannel.Result? = null
     private var pendingCode = 0
     private var channel: MethodChannel? = null

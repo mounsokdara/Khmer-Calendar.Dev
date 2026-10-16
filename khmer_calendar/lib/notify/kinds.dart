@@ -255,7 +255,7 @@ class TomorrowReminder extends ReminderKind {
           '',
           when,
           channel: 'tasks',
-          bodyOf: () => [calendarDetail(target, lang), ..._tomorrowLines(store, target, iso, lang)].join('\n'),
+          bodyOf: () => [if (store.tomorrowLunar) calendarDetail(target, lang), ..._tomorrowLines(store, target, iso, lang)].join('\n'),
         ),
       );
     }
@@ -265,9 +265,12 @@ class TomorrowReminder extends ReminderKind {
 
 List<String> _tomorrowLines(AppStore store, DateTime day, String iso, Lang lang) {
   final lines = <String>[];
-  for (final h in holidayObservancesOn(iso)) {
-    lines.add('${holidayTypeLabel(h.holidayType ?? HolidayType.traditional, lang)}: ${obsTitle(h, lang)}');
+  if (store.tomorrowHolidays) {
+    for (final h in holidayObservancesOn(iso)) {
+      lines.add('${holidayTypeLabel(h.holidayType ?? HolidayType.traditional, lang)}: ${obsTitle(h, lang)}');
+    }
   }
+  if (!store.tomorrowTasks) return lines;
   for (final e in store.events) {
     if (e.done == true || e.date.isEmpty) continue;
     final start = fromIso(e.date);

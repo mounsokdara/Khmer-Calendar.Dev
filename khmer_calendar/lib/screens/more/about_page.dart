@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' as services;
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../i18n.dart';
@@ -11,6 +14,103 @@ import '../../widgets/segmented_list.dart';
 import 'update_checker.dart';
 
 const _githubProfile = 'https://github.com/mounsokdara';
+
+class _GithubProfile {
+  const _GithubProfile({required this.name, required this.bio, required this.avatar});
+  final String name;
+  final String bio;
+  final String avatar;
+}
+
+_GithubProfile? _profileCache;
+
+Future<_GithubProfile?> _loadProfile() async {
+  if (_profileCache != null) return _profileCache;
+  try {
+    final r = await http.get(Uri.parse('https://api.github.com/users/mounsokdara')).timeout(const Duration(seconds: 8));
+    if (r.statusCode != 200) return null;
+    final j = jsonDecode(r.body) as Map<String, dynamic>;
+    return _profileCache = _GithubProfile(
+      name: (j['name'] as String?)?.trim().isNotEmpty == true ? j['name'] as String : (j['login'] as String? ?? appAuthor),
+      bio: (j['bio'] as String?) ?? '',
+      avatar: (j['avatar_url'] as String?) ?? 'https://github.com/mounsokdara.png',
+    );
+  } catch (_) {
+    return null;
+  }
+}
+
+class _AuthorCard extends StatelessWidget {
+  const _AuthorCard({required this.km, required this.onOpen});
+  final bool km;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return FutureBuilder<_GithubProfile?>(
+      future: _loadProfile(),
+      builder: (context, snap) {
+        final p = snap.data;
+        final name = p?.name ?? appAuthor;
+        final letter = Container(
+          width: 64,
+          height: 64,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(color: cs.primary, shape: BoxShape.circle),
+          child: Text(name.isEmpty ? '?' : name[0].toUpperCase(), style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: cs.onPrimary)),
+        );
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                ClipOval(
+                  child: SizedBox(
+                    width: 64,
+                    height: 64,
+                    child: p == null
+                        ? letter
+                        : Image.network(p.avatar, fit: BoxFit.cover, errorBuilder: (_, _, _) => letter),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(name, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+                      Text('@mounsokdara', style: TextStyle(color: cs.onSurfaceVariant)),
+                      if (p != null && p.bio.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(p.bio, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
+                      ],
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          _Label(km ? 'អ្នកអភិវឌ្ឍន៍ចម្បង' : 'Main developer', icon: Icons.code),
+                          _Label(km ? 'អ្នកអភិវឌ្ឍន៍ឯករាជ្យ' : 'Solo open source dev', icon: Icons.volunteer_activism_outlined),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: onOpen,
+              icon: const Icon(Icons.open_in_new, size: 18),
+              label: const Text('GitHub'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
 
 class _Section extends StatelessWidget {
   const _Section({required this.icon, required this.title, this.subtitle, required this.child});
@@ -152,25 +252,32 @@ class AboutPage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _Section(
-                        icon: Icons.calendar_month,
-                        title: t(lang, 'appName'),
-                        subtitle: km ? 'ប្រតិទិនចន្ទគតិខ្មែរ' : 'Khmer lunar calendar',
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(color: cs.surfaceContainer, borderRadius: BorderRadius.circular(20)),
                         child: Row(
                           children: [
                             ClipRRect(
                               borderRadius: BorderRadius.circular(18),
-                              child: Image.asset('assets/icons/icon-512.png', width: 64, height: 64),
+                              child: Image.asset('assets/icons/icon-512.png', width: 72, height: 72),
                             ),
                             const SizedBox(width: 16),
                             Expanded(
-                              child: Wrap(
-                                spacing: 6,
-                                runSpacing: 6,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  _Label('v$appVersion ($appBuildNumber)', icon: Icons.tag),
-                                  _Label(km ? 'ប្រភពបើកចំហ' : 'Open source', icon: Icons.code),
-                                  _Label(km ? 'គ្មានការតាមដាន' : 'No tracking', icon: Icons.shield_outlined),
+                                  Text(t(lang, 'appName'), style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+                                  Text(km ? 'ប្រតិទិនចន្ទគតិខ្មែរ' : 'Khmer lunar calendar', style: TextStyle(color: cs.onSurfaceVariant)),
+                                  const SizedBox(height: 8),
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 6,
+                                    children: [
+                                      _Label('v$appVersion ($appBuildNumber)', icon: Icons.tag),
+                                      _Label(km ? 'ប្រភពបើកចំហ' : 'Open source', icon: Icons.code),
+                                    ],
+                                  ),
                                 ],
                               ),
                             ),
@@ -181,50 +288,7 @@ class AboutPage extends StatelessWidget {
                       _Section(
                         icon: Icons.person_outline,
                         title: t(lang, 'createdBy'),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  width: 64,
-                                  height: 64,
-                                  alignment: Alignment.center,
-                                  decoration: BoxDecoration(color: cs.primary, shape: BoxShape.circle),
-                                  child: Text(
-                                    appAuthor.isEmpty ? '?' : appAuthor[0].toUpperCase(),
-                                    style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: cs.onPrimary),
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(appAuthor, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
-                                      Text('@mounsokdara', style: TextStyle(color: cs.onSurfaceVariant)),
-                                      const SizedBox(height: 8),
-                                      Wrap(
-                                        spacing: 6,
-                                        runSpacing: 6,
-                                        children: [
-                                          _Label(km ? 'អ្នកអភិវឌ្ឍន៍ចម្បង' : 'Main developer', icon: Icons.code),
-                                          _Label(km ? 'អ្នកអភិវឌ្ឍន៍ឯករាជ្យ' : 'Solo open source dev', icon: Icons.volunteer_activism_outlined),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            FilledButton.icon(
-                              onPressed: () => open(_githubProfile),
-                              icon: const Icon(Icons.open_in_new, size: 18),
-                              label: const Text('GitHub'),
-                            ),
-                          ],
-                        ),
+                        child: _AuthorCard(km: km, onOpen: () => open(_githubProfile)),
                       ),
                       gap,
                       _Section(
@@ -251,20 +315,6 @@ class AboutPage extends StatelessWidget {
                       ),
                       gap,
                       _Section(
-                        icon: Icons.folder_open_outlined,
-                        title: km ? 'គម្រោងរបស់ខ្ញុំ' : 'My projects',
-                        subtitle: km ? 'មើលគម្រោងផ្សេងទៀតនៅ GitHub' : 'More projects on GitHub',
-                        child: SegmentedGroup(
-                          padding: EdgeInsets.zero,
-                          filled: false,
-                          children: [
-                            for (final r in const ['Khmer-Calendar', 'video-player', 'signature-studio', 'Link-Preview'])
-                              _LinkRow(icon: Icons.code, title: r, subtitle: 'github.com/mounsokdara/$r', onTap: () => open('$_githubProfile/$r')),
-                          ],
-                        ),
-                      ),
-                      gap,
-                      _Section(
                         icon: Icons.gavel_outlined,
                         title: km ? 'ច្បាប់' : 'Legal',
                         subtitle: km ? 'អាជ្ញាបណ្ណ និងឯកជនភាព' : 'Licenses and privacy',
@@ -281,10 +331,10 @@ class AboutPage extends StatelessWidget {
                             ),
                             _LinkRow(
                               icon: Icons.privacy_tip_outlined,
-                              title: t(lang, 'privacyTitle'),
-                              subtitle: t(lang, 'privacySub'),
+                              title: km ? 'គោលការណ៍ឯកជនភាព' : 'Privacy policy',
+                              subtitle: km ? 'ទិន្នន័យអ្វីដែលកម្មវិធីប្រើ' : 'What data the app uses',
                               external: false,
-                              onTap: () => context.push('/settings/privacy'),
+                              onTap: () => context.push('/privacy-policy'),
                             ),
                           ],
                         ),

@@ -84,6 +84,27 @@ class NotificationsPage extends StatelessWidget {
                     value: store.notifyTomorrow,
                     onChanged: (v) => toggle(v, store.setNotifyTomorrow),
                   ),
+                  if (store.notifyTomorrow)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 12, right: 12, bottom: 8),
+                      child: Column(
+                        children: [
+                          for (final o in <(String, bool, void Function(bool))>[
+                            ('tomorrowOptTasks', store.tomorrowTasks, store.setTomorrowTasks),
+                            ('tomorrowOptHolidays', store.tomorrowHolidays, store.setTomorrowHolidays),
+                            ('tomorrowOptLunar', store.tomorrowLunar, store.setTomorrowLunar),
+                          ])
+                            CheckboxListTile(
+                              dense: true,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                              controlAffinity: ListTileControlAffinity.leading,
+                              title: Text(t(lang, o.$1)),
+                              value: o.$2,
+                              onChanged: (v) => o.$3(v ?? false),
+                            ),
+                        ],
+                      ),
+                    ),
                 ],
               ),
             ],
