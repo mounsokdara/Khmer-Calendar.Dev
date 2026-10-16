@@ -185,7 +185,7 @@ List<Observance> rangeObservances(DateTime start, DateTime end, List<CalendarEve
     }
   }
   final out = <Observance>[];
-  final seen = <String>{};
+  final seen = <String, int>{};
   for (final d in days) {
     final iso = isoOf(d);
     final info = dayInfo(iso);
@@ -196,8 +196,14 @@ List<Observance> rangeObservances(DateTime start, DateTime end, List<CalendarEve
     for (final h in hols) {
       if (hasPchumBenFestival && h.nameKm == _pchumBenKm && h.type == HolidayType.religious) continue;
       final id = 'hol-$iso-${h.nameKm}';
-      if (seen.contains(id)) continue;
-      seen.add(id);
+      final at = seen[id];
+      if (at != null) {
+        // Same name listed under two types (e.g. Water Festival): keep the public one.
+        if (h.type != HolidayType.public || out[at].holidayType == HolidayType.public) continue;
+        out.removeAt(at);
+        seen.updateAll((k, v) => v > at ? v - 1 : v);
+      }
+      seen[id] = out.length;
       out.add(Observance(
         id: id,
         date: iso,

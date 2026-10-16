@@ -403,6 +403,18 @@ List<({int month, int day, int length})> _yearTable(int year) {
   return out;
 }
 
+// A month index only means something relative to one year's month list (12 or 13 names).
+// When the cursor moves from one year to the next its index must be converted by name,
+// otherwise a leap-month year shifts every following date by a whole month.
+int _reindexMonth(int index, int fromYear, int toYear) {
+  final name = _monthName(index, fromYear);
+  final list = _yearType(toYear) == 'leap-month' ? _leapMonths : _normalMonths;
+  final i = list.indexOf(name);
+  if (i >= 0) return i + 1;
+  if (name == 'បឋមាសាឍ' || name == 'ទុតិយាសាឍ') return list.indexOf('អាសាឍ') + 1;
+  return _wrapMonth(index, toYear);
+}
+
 ({int month, int day}) _cursorOf(int e) {
   final hit = _yearCursorCache[e];
   if (hit != null) return hit;
@@ -421,6 +433,7 @@ List<({int month, int day, int length})> _yearTable(int year) {
       }
     }
     for (var r = from - 1; r >= e; r -= 1) {
+      t = _reindexMonth(t, r + 1, r);
       n -= _gregorianLength(r) - _yearLength(r);
       while (n <= 0) {
         t = _wrapMonth(t - 1, r);
@@ -430,7 +443,7 @@ List<({int month, int day, int length})> _yearTable(int year) {
         n -= _monthLength(t, r);
         t = _wrapMonth(t + 1, r);
       }
-      _yearCursorCache[r] = (month: t, day: n);
+      _yearCursorCache[r] = (month: _reindexMonth(t, r, r), day: n);
     }
     return _yearCursorCache[e]!;
   }
@@ -456,6 +469,7 @@ List<({int month, int day, int length})> _yearTable(int year) {
       t = _wrapMonth(t - 1, r);
       n += _monthLength(t, r);
     }
+    t = _reindexMonth(t, r, r + 1);
   }
   final out = (month: t, day: n);
   _yearCursorCache[e] = out;
