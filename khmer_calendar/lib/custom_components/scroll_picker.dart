@@ -7,6 +7,9 @@ import '../widgets/dialog_actions.dart';
 
 const double scrollPickerItemExtent = 42;
 const double scrollPickerVisibleItems = 7;
+const double scrollPickerDiameterRatio = 2.2;
+const double scrollPickerPerspective = 0.003;
+const double scrollPickerSqueeze = 1.1;
 const BoxConstraints scrollPickerDialogConstraints =
     BoxConstraints(minWidth: 280, maxWidth: 400);
 
@@ -85,9 +88,9 @@ class ScrollPicker extends StatelessWidget {
     this.itemExtent = scrollPickerItemExtent,
     this.visibleItems = scrollPickerVisibleItems,
     this.highlight = ScrollPickerHighlight.lines,
-    this.diameterRatio = 8,
-    this.perspective = 0.0008,
-    this.squeeze = 1,
+    this.diameterRatio = scrollPickerDiameterRatio,
+    this.perspective = scrollPickerPerspective,
+    this.squeeze = scrollPickerSqueeze,
     this.textStyle,
     this.enableTyping = true,
     this.feedback = true,
@@ -183,9 +186,9 @@ class ScrollPickerColumn extends StatefulWidget {
     this.itemExtent = scrollPickerItemExtent,
     this.visibleItems = scrollPickerVisibleItems,
     this.highlight = ScrollPickerHighlight.lines,
-    this.diameterRatio = 8,
-    this.perspective = 0.0008,
-    this.squeeze = 1,
+    this.diameterRatio = scrollPickerDiameterRatio,
+    this.perspective = scrollPickerPerspective,
+    this.squeeze = scrollPickerSqueeze,
     this.textStyle,
     this.enableTyping = true,
     this.feedback = true,
@@ -444,9 +447,9 @@ Future<List<int>?> showScrollPickerDialog(
   double itemExtent = scrollPickerItemExtent,
   double visibleItems = scrollPickerVisibleItems,
   ScrollPickerHighlight highlight = ScrollPickerHighlight.lines,
-  double diameterRatio = 8,
-  double perspective = 0.0008,
-  double squeeze = 1,
+  double diameterRatio = scrollPickerDiameterRatio,
+  double perspective = scrollPickerPerspective,
+  double squeeze = scrollPickerSqueeze,
   TextStyle? textStyle,
 }) {
   return showDialog<List<int>>(
