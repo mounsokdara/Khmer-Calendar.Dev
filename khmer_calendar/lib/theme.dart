@@ -353,6 +353,7 @@ ThemeData buildTheme({
   }
   return ThemeData(
     useMaterial3: true,
+    splashFactory: InkSparkle.splashFactory,
     colorScheme: color,
     brightness: brightness,
     fontFamily: 'KantumruyPro',
