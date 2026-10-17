@@ -28,29 +28,17 @@
             android:text="ប្រតិទិនខ្មែរ"
             android:textSize="12sp" />
 
-        <FrameLayout
-            android:layout_width="64dp"
-            android:layout_height="64dp"
-            android:layout_marginTop="2dp">
-
-            <ImageView
-                android:id="@+id/widget_day_ring"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:contentDescription="@null"
-                android:src="@drawable/widget_today_ring_large" />
-
-            <TextView
-                android:id="@+id/widget_day"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:text="15"
-                android:textSize="30sp"
-                android:textStyle="bold" />
-        </FrameLayout>
+        <TextView
+            android:id="@+id/widget_day"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:ellipsize="end"
+            android:gravity="center"
+            android:maxLines="1"
+            android:text="15"
+            android:textSize="30sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/widget_weekday"
