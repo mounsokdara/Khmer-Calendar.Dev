@@ -90,13 +90,13 @@ void syncWidgetTheme(AppStore store, ColorScheme light, ColorScheme dark) {
 
 final Map<bool, String> _monthInfoCache = {};
 
-/// "Year of the horse, era, B.E." line for every month the widget can page to (1900-2100),
+/// "Year of the horse, era, B.E." line for every month the widget can page to (calendarStartYear–calendarEndYear),
 /// taken from the middle of each month so it never straddles Khmer New Year.
 String _monthInfoJson(Lang lang) {
   final en = lang == Lang.en;
   return _monthInfoCache[en] ??= () {
     final out = <String, String>{};
-    for (var y = 1900; y <= 2100; y++) {
+    for (var y = calendarStartYear; y <= calendarEndYear; y++) {
       for (var m = 1; m <= 12; m++) {
         try {
           final lu = lunarOf(DateTime(y, m, 15));
@@ -181,7 +181,7 @@ Map<String, String> _dayNotifyFields(DateTime d, Lang lang, List<CalendarEvent> 
   };
 }
 
-/// Everything that does not depend on the user's events. It scans 1900-2100 for holiday and silday marks (the widget can page to any year) and
+/// Everything that does not depend on the user's events. It scans calendarStartYear–calendarEndYear for holiday and silday marks (the widget can page to any year) and
 /// holiday tables, so it must run in a background isolate (never on the UI thread).
 Map<String, Object> _staticWidgetIsolate(bool en) {
   final lang = en ? Lang.en : Lang.km;
@@ -213,7 +213,7 @@ Map<String, Object> _staticWidgetIsolate(bool en) {
     if (!cur.contains(f)) marks[day] = '$cur$f';
   }
 
-  for (var y = 1900; y <= 2100; y++) {
+  for (var y = calendarStartYear; y <= calendarEndYear; y++) {
     List<Observance> yearHols;
     try {
       yearHols = holidayObservancesOfYear(y);
