@@ -96,9 +96,12 @@ class AppSounds {
   String _wheel = wheelSoundNone;
   int _gen = 0;
   Future<Source?>? _custom;
-  final Set<AudioPlayer> _live = {};
+  AudioPlayer? _player;
+  bool _ready = false;
+  bool _playing = false;
   DateTime _last = DateTime.fromMillisecondsSinceEpoch(0);
   WheelConfig? _config;
+  String? _loadedId;
 
   String get wheel => _wheel;
 
@@ -107,6 +110,8 @@ class AppSounds {
     _wheel = normalized.isEmpty ? wheelSoundNone : normalized;
     _gen++;
     _custom = null;
+    _loadedId = null;
+    unawaited(_stop());
     unawaited(_loadConfig());
   }
 
@@ -114,6 +119,8 @@ class AppSounds {
     _config ??= await WheelConfig.load();
   }
 
+  /// One short click for the scroll wheel / sound picker. Reuses a single player and
+  /// stops the previous play so rapid taps never stack audio sessions.
   void playWheel() {
     Haptics.instance.tick();
     if (_wheel == wheelSoundNone) return;
@@ -122,45 +129,70 @@ class AppSounds {
 
   Future<void> _play(String id, int gen) async {
     final config = _config ??= await WheelConfig.load();
-    final minGap = Duration(milliseconds: config.minGapMs);
+    final minGap = Duration(milliseconds: config.minGapMs.clamp(20, 200));
     final now = DateTime.now();
     if (now.difference(_last) < minGap) return;
-    if (_live.length >= config.maxLivePlayers) return;
-    _last = now;
-
-    final player = AudioPlayer();
-    _live.add(player);
-    StreamSubscription<void>? sub;
-    Timer? guard;
-    var destroyed = false;
-
-    Future<void> destroy() async {
-      if (destroyed) return;
-      destroyed = true;
-      guard?.cancel();
-      _live.remove(player);
-      try {
-        await sub?.cancel();
-        await player.dispose();
-      } catch (_) {}
+    if (_playing) {
+      // Still finishing a previous play — drop this tick instead of queuing another player.
+      return;
     }
-
-    guard = Timer(Duration(milliseconds: config.maxLifetimeMs), destroy);
-    sub = player.onPlayerComplete.listen((_) => destroy());
+    _last = now;
+    _playing = true;
 
     try {
+      if (gen != _gen) return;
       final source = await _sourceFor(id, config);
-      if (source == null || gen != _gen) {
-        await destroy();
-        return;
+      if (source == null || gen != _gen) return;
+
+      final player = await _ensurePlayer();
+      if (gen != _gen) return;
+
+      // Stop + seek + play on the same player — never allocate a new one per tick.
+      try {
+        await player.stop();
+      } catch (_) {}
+      if (_loadedId != id) {
+        await player.setSource(source);
+        _loadedId = id;
       }
-      final ctx = _context();
-      if (ctx != null) await player.setAudioContext(ctx);
-      await player.play(source);
+      await player.seek(Duration.zero);
+      await player.resume();
     } catch (e) {
       debugPrint('wheel sound failed: $e');
-      await destroy();
+      _loadedId = null;
+    } finally {
+      _playing = false;
     }
+  }
+
+  Future<AudioPlayer> _ensurePlayer() async {
+    final existing = _player;
+    if (existing != null && _ready) return existing;
+
+    final player = existing ?? AudioPlayer();
+    _player = player;
+    if (!_ready) {
+      final ctx = _context();
+      if (ctx != null) {
+        try {
+          await player.setAudioContext(ctx);
+        } catch (_) {}
+      }
+      try {
+        await player.setReleaseMode(ReleaseMode.stop);
+        await player.setPlayerMode(PlayerMode.lowLatency);
+      } catch (_) {}
+      _ready = true;
+    }
+    return player;
+  }
+
+  Future<void> _stop() async {
+    final player = _player;
+    if (player == null) return;
+    try {
+      await player.stop();
+    } catch (_) {}
   }
 
   Future<Source?> _sourceFor(String id, WheelConfig config) async {
