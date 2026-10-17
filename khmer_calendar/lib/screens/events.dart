@@ -49,23 +49,42 @@ String _filterOf(String stored) {
   return _eventFilters.any((f) => f.id == stored) ? stored : 'all';
 }
 
-class _EventsBody extends StatelessWidget {
+class _EventsBody extends StatefulWidget {
   const _EventsBody({required this.store});
   final AppStore store;
 
-  List<Observance> _filtered(String filter, int year) {
-    return yearObservances(year, store.events).where((o) {
-      switch (filter) {
-        case 'holiday':
-          return o.kind == Kind.holiday && o.holidayType == HolidayType.public;
-        case 'other':
-          return o.kind == Kind.holiday && o.holidayType != HolidayType.public;
-        case 'sil':
-          return o.kind == Kind.sil;
-        default:
-          return true;
+  @override
+  State<_EventsBody> createState() => _EventsBodyState();
+}
+
+class _EventsBodyState extends State<_EventsBody> {
+  static const _centerKey = Key('events-center');
+
+  AppStore get store => widget.store;
+  late int _anchor = fromIso(widget.store.cursor).year;
+  String _cacheFilter = '';
+  List<CalendarEvent>? _cacheEvents;
+  final _cache = <int, Map<String, List<Observance>>>{};
+
+  Map<String, List<Observance>> _yearGroups(String filter, int year) {
+    if (_cacheFilter != filter || !identical(_cacheEvents, store.events)) {
+      _cache.clear();
+      _cacheFilter = filter;
+      _cacheEvents = store.events;
+    }
+    return _cache[year] ??= () {
+      final groups = <String, List<Observance>>{};
+      for (final o in yearObservances(year, store.events)) {
+        final keep = switch (filter) {
+          'holiday' => o.kind == Kind.holiday && o.holidayType == HolidayType.public,
+          'other' => o.kind == Kind.holiday && o.holidayType != HolidayType.public,
+          'sil' => o.kind == Kind.sil,
+          _ => true,
+        };
+        if (keep) groups.putIfAbsent(o.date.substring(0, 7), () => []).add(o);
       }
-    }).toList();
+      return groups;
+    }();
   }
 
   void _openObs(BuildContext context, Observance item) {
@@ -101,18 +120,38 @@ class _EventsBody extends StatelessWidget {
     );
   }
 
+  Widget _yearBlock(BuildContext context, int year, String filter, bool wide, bool xl) {
+    final lang = store.lang;
+    final cs = Theme.of(context).colorScheme;
+    final groups = _yearGroups(filter, year);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 16, 0),
+          child: Text('$year', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+        ),
+        if (groups.isEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 16, 8),
+            child: Text(t(lang, 'noItemsYear'), style: TextStyle(color: cs.onSurfaceVariant)),
+          )
+        else if (xl)
+          _holidayGrid(context, groups, 3)
+        else if (wide)
+          _holidayGrid(context, groups, 2)
+        else
+          for (final e in groups.entries) _holidayGroup(context, e.key, e.value),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final lang = store.lang;
-    final year = fromIso(store.cursor).year;
     final filter = _filterOf(store.lastEventsPane);
     final isTask = filter == 'task';
-    final groups = <String, List<Observance>>{};
-    if (!isTask) {
-      for (final h in _filtered(filter, year)) {
-        groups.putIfAbsent(h.date.substring(0, 7), () => []).add(h);
-      }
-    }
     final today = todayIso();
     final current = store.events.where((e) => e.done != true && (e.date.isEmpty || e.date.compareTo(today) >= 0)).toList();
     final overdue = store.events.where((e) => e.done != true && e.date.isNotEmpty && e.date.compareTo(today) < 0).toList();
@@ -130,14 +169,14 @@ class _EventsBody extends StatelessWidget {
               if (!isTask)
                 TextButton.icon(
                   onPressed: () async {
-                    final pick = await showYearWheel(context, lang: lang, year: year);
-                    if (pick != null) {
-                      final cur = fromIso(store.cursor);
-                      store.setCursor(isoOf(DateTime(pick, cur.month, 1)));
-                    }
+                    final pick = await showYearWheel(context, lang: lang, year: _anchor);
+                    if (pick == null || !mounted) return;
+                    final cur = fromIso(store.cursor);
+                    setState(() => _anchor = pick);
+                    store.setCursor(isoOf(DateTime(pick, cur.month, 1)));
                   },
                   icon: const Icon(Icons.expand_more),
-                  label: Text('$year'),
+                  label: Text('$_anchor'),
                 ),
               if (isTask || filter == 'all')
                 IconButton(
@@ -152,19 +191,21 @@ class _EventsBody extends StatelessWidget {
         const SizedBox(height: 4),
         Expanded(
           child: !isTask
-              ? (groups.isEmpty
-                  ? Center(child: Text(t(lang, 'noItemsYear')))
-                  : ListView(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      children: [
-                        if (xl)
-                          _holidayGrid(context, groups, 3)
-                        else if (wide)
-                          _holidayGrid(context, groups, 2)
-                        else
-                          for (final e in groups.entries) _holidayGroup(context, e.key, e.value),
-                      ],
-                    ))
+              ? CustomScrollView(
+                  key: ValueKey('$filter-$_anchor'),
+                  center: _centerKey,
+                  slivers: [
+                    SliverList.builder(
+                      itemCount: _anchor - calendarStartYear,
+                      itemBuilder: (c, i) => _yearBlock(c, _anchor - 1 - i, filter, wide, xl),
+                    ),
+                    SliverList.builder(
+                      key: _centerKey,
+                      itemCount: calendarEndYear - _anchor + 1,
+                      itemBuilder: (c, i) => _yearBlock(c, _anchor + i, filter, wide, xl),
+                    ),
+                  ],
+                )
               : ListView(
                   padding: const EdgeInsets.only(bottom: 16),
                   children: [
