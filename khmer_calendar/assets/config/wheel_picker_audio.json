@@ -15,35 +15,35 @@
     {
       "id": "wheel1",
       "asset": "sounds/wheel1.mp3",
-      "start_ms": 25,
+      "start_ms": 0,
       "en": "Wheel 1",
       "km": "សំឡេងកង់ ១"
     },
     {
       "id": "wheel2",
       "asset": "sounds/wheel2.mp3",
-      "start_ms": 24,
+      "start_ms": 0,
       "en": "Wheel 2",
       "km": "សំឡេងកង់ ២"
     },
     {
       "id": "iphone",
       "asset": "sounds/iphone_wheel.mp3",
-      "start_ms": 64,
+      "start_ms": 0,
       "en": "iPhone",
       "km": "iPhone"
     },
     {
       "id": "book_open",
       "asset": "sounds/book_open.mp3",
-      "start_ms": 360,
+      "start_ms": 0,
       "en": "Book Open",
       "km": "បើកសៀវភៅ"
     },
     {
       "id": "ded",
       "asset": "sounds/ded.mp3",
-      "start_ms": 119,
+      "start_ms": 0,
       "en": "Ded",
       "km": "ដេដ"
     },
@@ -64,35 +64,35 @@
     {
       "id": "high_pitch",
       "asset": "sounds/high_pitch.mp3",
-      "start_ms": 49,
+      "start_ms": 0,
       "en": "High Pitch",
       "km": "សំឡេងខ្ពស់"
     },
     {
       "id": "idk_what_to_call_ts",
       "asset": "sounds/idk_what_to_call_ts.mp3",
-      "start_ms": 219,
+      "start_ms": 0,
       "en": "IDK What To Call This",
       "km": "មិនដឹងហៅថាអ្វី"
     },
     {
       "id": "plastic_click",
       "asset": "sounds/plastic_click.ogg",
-      "start_ms": 132,
+      "start_ms": 0,
       "en": "Plastic Click",
       "km": "ចុចប្លាស្ទិក"
     },
     {
       "id": "pop",
       "asset": "sounds/pop.mp3",
-      "start_ms": 31,
+      "start_ms": 0,
       "en": "Pop",
       "km": "ប៉ុប"
     },
     {
       "id": "table_knock",
       "asset": "sounds/table_knock.mp3",
-      "start_ms": 76,
+      "start_ms": 0,
       "en": "Table Knock",
       "km": "គោះតុ"
     },
