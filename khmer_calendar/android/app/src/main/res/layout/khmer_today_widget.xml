@@ -38,7 +38,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:contentDescription="@null"
-                android:src="@drawable/widget_today_ring" />
+                android:src="@drawable/widget_today_ring_large" />
 
             <TextView
                 android:id="@+id/widget_day"
