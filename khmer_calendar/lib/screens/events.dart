@@ -62,9 +62,44 @@ class _EventsBodyState extends State<_EventsBody> {
 
   AppStore get store => widget.store;
   late int _anchor = fromIso(widget.store.cursor).year;
+  late final ValueNotifier<int> _visible = ValueNotifier<int>(_anchor);
+  final _marks = <int, _YearMarkState>{};
+  String _lastFilter = '';
   String _cacheFilter = '';
   List<CalendarEvent>? _cacheEvents;
   final _cache = <int, Map<String, List<Observance>>>{};
+
+  @override
+  void dispose() {
+    _visible.dispose();
+    super.dispose();
+  }
+
+  void _syncYear(BuildContext scrollContext) {
+    final box = scrollContext.findRenderObject();
+    if (box is! RenderBox || !box.attached) return;
+    final top = box.localToGlobal(Offset.zero).dy;
+    int? above;
+    var aboveY = -double.infinity;
+    int? below;
+    var belowY = double.infinity;
+    for (final e in _marks.entries) {
+      final rb = e.value.context.findRenderObject();
+      if (rb is! RenderBox || !rb.attached || !rb.hasSize) continue;
+      final y = rb.localToGlobal(Offset.zero).dy;
+      if (y <= top + 1) {
+        if (y > aboveY) {
+          aboveY = y;
+          above = e.key;
+        }
+      } else if (y < belowY) {
+        belowY = y;
+        below = e.key;
+      }
+    }
+    final year = above ?? (below == null ? null : (below > calendarStartYear ? below - 1 : below));
+    if (year != null && year != _visible.value) _visible.value = year;
+  }
 
   Map<String, List<Observance>> _yearGroups(String filter, int year) {
     if (_cacheFilter != filter || !identical(_cacheEvents, store.events)) {
@@ -127,9 +162,13 @@ class _EventsBodyState extends State<_EventsBody> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 16, 0),
-          child: Text('$year', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+        _YearMark(
+          year: year,
+          registry: _marks,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 16, 0),
+            child: Text('$year', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+          ),
         ),
         if (groups.isEmpty)
           Padding(
@@ -152,6 +191,12 @@ class _EventsBodyState extends State<_EventsBody> {
     final lang = store.lang;
     final filter = _filterOf(store.lastEventsPane);
     final isTask = filter == 'task';
+    if (_lastFilter != filter) {
+      _lastFilter = filter;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _visible.value = _anchor;
+      });
+    }
     final today = todayIso();
     final current = store.events.where((e) => e.done != true && (e.date.isEmpty || e.date.compareTo(today) >= 0)).toList();
     final overdue = store.events.where((e) => e.done != true && e.date.isNotEmpty && e.date.compareTo(today) < 0).toList();
@@ -167,16 +212,20 @@ class _EventsBodyState extends State<_EventsBody> {
             children: [
               Expanded(child: Text(t(lang, 'events'), style: Theme.of(context).textTheme.headlineSmall)),
               if (!isTask)
-                TextButton.icon(
-                  onPressed: () async {
-                    final pick = await showYearWheel(context, lang: lang, year: _anchor);
-                    if (pick == null || !mounted) return;
-                    final cur = fromIso(store.cursor);
-                    setState(() => _anchor = pick);
-                    store.setCursor(isoOf(DateTime(pick, cur.month, 1)));
-                  },
-                  icon: const Icon(Icons.expand_more),
-                  label: Text('$_anchor'),
+                ValueListenableBuilder<int>(
+                  valueListenable: _visible,
+                  builder: (_, year, _) => TextButton.icon(
+                    onPressed: () async {
+                      final pick = await showYearWheel(context, lang: lang, year: year);
+                      if (pick == null || !mounted) return;
+                      final cur = fromIso(store.cursor);
+                      setState(() => _anchor = pick);
+                      _visible.value = pick;
+                      store.setCursor(isoOf(DateTime(pick, cur.month, 1)));
+                    },
+                    icon: const Icon(Icons.expand_more),
+                    label: Text('$year'),
+                  ),
                 ),
               if (isTask || filter == 'all')
                 IconButton(
@@ -191,7 +240,15 @@ class _EventsBodyState extends State<_EventsBody> {
         const SizedBox(height: 4),
         Expanded(
           child: !isTask
-              ? CustomScrollView(
+              ? NotificationListener<ScrollNotification>(
+                  onNotification: (n) {
+                    final ctx = n.context;
+                    if (ctx != null && n.depth == 0 && (n is ScrollUpdateNotification || n is ScrollEndNotification)) {
+                      _syncYear(ctx);
+                    }
+                    return false;
+                  },
+                  child: CustomScrollView(
                   key: ValueKey('$filter-$_anchor'),
                   center: _centerKey,
                   slivers: [
@@ -205,7 +262,7 @@ class _EventsBodyState extends State<_EventsBody> {
                       itemBuilder: (c, i) => _yearBlock(c, _anchor + i, filter, wide, xl),
                     ),
                   ],
-                )
+                ))
               : ListView(
                   padding: const EdgeInsets.only(bottom: 16),
                   children: [
@@ -299,4 +356,40 @@ class _EventsBodyState extends State<_EventsBody> {
       ],
     );
   }
+}
+
+class _YearMark extends StatefulWidget {
+  const _YearMark({required this.year, required this.registry, required this.child});
+  final int year;
+  final Map<int, _YearMarkState> registry;
+  final Widget child;
+
+  @override
+  State<_YearMark> createState() => _YearMarkState();
+}
+
+class _YearMarkState extends State<_YearMark> {
+  @override
+  void initState() {
+    super.initState();
+    widget.registry[widget.year] = this;
+  }
+
+  @override
+  void didUpdateWidget(_YearMark old) {
+    super.didUpdateWidget(old);
+    if (old.year != widget.year) {
+      if (identical(old.registry[old.year], this)) old.registry.remove(old.year);
+      widget.registry[widget.year] = this;
+    }
+  }
+
+  @override
+  void dispose() {
+    if (identical(widget.registry[widget.year], this)) widget.registry.remove(widget.year);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
