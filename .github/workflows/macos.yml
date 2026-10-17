@@ -1,4 +1,6 @@
-# macOS: build, codesign and pack a .dmg.
+# macOS: build once (Xcode makes a universal app), then standalone pack jobs make one signed .dmg each:
+# KhmerCalendar-macos-arm64.dmg (Apple Silicon), KhmerCalendar-macos-x86_64.dmg (Intel) and
+# KhmerCalendar-macos-universal.dmg (both in one file).
 # Runs on its own (Actions tab > Run workflow) or is called by release.yml.
 name: macOS
 
@@ -10,7 +12,7 @@ permissions:
   contents: read
 
 jobs:
-  macos:
+  build:
     runs-on: macos-latest
     timeout-minutes: 45
     steps:
@@ -24,18 +26,43 @@ jobs:
         working-directory: khmer_calendar
       - run: flutter build macos --release
         working-directory: khmer_calendar
-      - name: Sign macOS app (codesign)
+      - name: Keep the universal app (tar keeps symlinks and permissions)
+        run: |
+          APP=$(find khmer_calendar/build/macos -name "*.app" | head -1)
+          tar -C "$(dirname "$APP")" -cf macos-app.tar "$(basename "$APP")"
+          lipo -archs "$APP/Contents/MacOS/"* || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-app
+          path: macos-app.tar
+          retention-days: 1
+
+  pack:
+    name: macos-${{ matrix.arch }}
+    needs: build
+    runs-on: macos-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [arm64, x86_64, universal]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: macos-app
+      - name: Thin (if needed), sign and pack
         env:
           PFX_B64: ${{ secrets.DESKTOP_SIGN_PFX_BASE64 }}
           PFX_PASS: ${{ secrets.DESKTOP_SIGN_PASSWORD }}
         run: |
-          APP=$(find khmer_calendar/build/macos -name "*.app" | head -1)
+          mkdir app && tar -C app -xf macos-app.tar
+          APP=$(find app -maxdepth 1 -name "*.app" | head -1)
+          if [ "${{ matrix.arch }}" != "universal" ]; then bash scripts/thin-macos.sh "$APP" "${{ matrix.arch }}"; fi
           bash scripts/sign-macos.sh "$APP"
-      - name: Pack dmg
-        run: |
-          APP=$(find khmer_calendar/build/macos -name "*.app" | head -1)
-          hdiutil create -volname "Khmer Calendar" -srcfolder "$APP" -ov -format UDZO KhmerCalendar.dmg
+          hdiutil create -volname "Khmer Calendar" -srcfolder "$APP" -ov -format UDZO "KhmerCalendar-macos-${{ matrix.arch }}.dmg"
+          ls -lh "KhmerCalendar-macos-${{ matrix.arch }}.dmg"
       - uses: actions/upload-artifact@v4
         with:
-          name: macos
-          path: KhmerCalendar.dmg
+          name: macos-${{ matrix.arch }}
+          path: KhmerCalendar-macos-${{ matrix.arch }}.dmg

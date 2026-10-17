@@ -1,12 +1,16 @@
-# Android: build one APK per ABI (armeabi-v7a, arm64-v8a, x86_64), then align, sign (v1+v2+v3+v4) and verify each.
-# Only the APKs are shipped; the detached v4 .idsig is verified but not uploaded.
+# Android: standalone jobs, one per package (arm32, arm64, x64, x86, arm32_64, x86_x64, universal).
+# Each job builds, aligns, signs (v1+v2+v3+v4) and verifies its own APK, uploads it as its own artifact and,
+# on pushes, as its own asset of the "dev-latest" pre-release (so nothing has to be unzipped from a bundle).
+# Version code = versionCode from pubspec.yaml * 10 + a digit per package (see build.gradle.kts), never the run number.
+#   x86 and x86_x64 are best-effort: Flutter release builds only support arm, arm64 and x64, so these two legs may fail.
+#   "armeabi" (ARMv5/v6) cannot be built by Flutter at all.
 # Runs on its own (Actions tab > Run workflow) or is called by release.yml.
 name: Android
 
 on:
   workflow_call:
   workflow_dispatch:
-  # Dev: every push to main builds the split APKs and refreshes the "dev-latest" pre-release.
+  # Dev: every push to main builds all packages and refreshes the "dev-latest" pre-release.
   push:
     branches: [main]
     paths-ignore:
@@ -20,9 +24,39 @@ permissions:
   contents: write
 
 jobs:
-  android:
+  prepare:
+    # Fresh empty pre-release that every package job uploads into (pushes only).
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    steps:
+      - env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete dev-latest --yes --cleanup-tag --repo "$GITHUB_REPOSITORY" || true
+          gh release create dev-latest --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --title "Khmer Calendar DEV (${GITHUB_SHA::7})" \
+            --notes "Dev build from main @ ${GITHUB_SHA::7}. One standalone APK per package: arm64 for almost every phone, arm32 for old 32-bit phones, x64 for emulators, arm32_64 / x86_x64 / universal for several ABIs in one file. The name in the file is the package. Same app id as production; uninstall the production app first if the signing key differs." \
+            --prerelease
+
+  android:
+    name: android-${{ matrix.name }}
+    needs: prepare
+    # prepare is skipped outside pushes; still run in that case.
+    if: ${{ !cancelled() && (needs.prepare.result == 'success' || needs.prepare.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.experimental }}
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: arm32,     target: "android-arm",                           split: true,  out: app-armeabi-v7a-release.apk, experimental: false }
+          - { name: arm64,     target: "android-arm64",                         split: true,  out: app-arm64-v8a-release.apk,   experimental: false }
+          - { name: x64,       target: "android-x64",                           split: true,  out: app-x86_64-release.apk,      experimental: false }
+          - { name: x86,       target: "android-x86",                           split: true,  out: app-x86-release.apk,         experimental: true }
+          - { name: arm32_64,  target: "android-arm,android-arm64",             split: false, out: app-release.apk,            experimental: false }
+          - { name: x86_x64,   target: "android-x86,android-x64",               split: false, out: app-release.apk,            experimental: true }
+          - { name: universal, target: "android-arm,android-arm64,android-x64", split: false, out: app-release.apk,            experimental: false }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -42,45 +76,37 @@ jobs:
           echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/khmer-release.keystore"
       - run: flutter pub get
         working-directory: khmer_calendar
-      # arm + arm64 cover every real phone (x86_64 is emulators only, ~1/3 of the old size).
       # --split-debug-info strips debug symbols from libapp.so; symbols are kept as an artifact.
-      # Pushes get an increasing build number (run number) so each dev build installs over the last one;
-      # release runs keep the version code from pubspec.yaml.
-      - run: flutter build apk --release --split-per-abi --target-platform android-arm,android-arm64,android-x64 --split-debug-info=build/symbols ${{ github.event_name == 'push' && format('--build-number={0}', github.run_number) || '' }}
+      # No --build-number: the version code is the one in pubspec.yaml.
+      - run: flutter build apk --release ${{ matrix.split && '--split-per-abi' || '' }} --target-platform ${{ matrix.target }} --split-debug-info=build/symbols
         working-directory: khmer_calendar
         env:
           ANDROID_KEYSTORE: ${{ runner.temp }}/khmer-release.keystore
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-      - name: Align, sign (v1+v2+v3+v4) + verify APKs
+      - name: Align, sign (v1+v2+v3+v4) + verify
         env:
           KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
           OUTDIR=khmer_calendar/build/app/outputs/flutter-apk
-          for abi in armeabi-v7a arm64-v8a x86_64; do
-            KS_FILE="$RUNNER_TEMP/khmer-release.keystore" bash scripts/sign-apk.sh "$OUTDIR/app-$abi-release.apk" "$OUTDIR/app-$abi-release-signed.apk"
-            mv -f "$OUTDIR/app-$abi-release-signed.apk" "$OUTDIR/app-$abi-release.apk"
-          done
+          KS_FILE="$RUNNER_TEMP/khmer-release.keystore" bash scripts/sign-apk.sh "$OUTDIR/${{ matrix.out }}" "$OUTDIR/KhmerCalendar-${{ matrix.name }}.apk"
+          AAPT2=$(ls -d "${ANDROID_HOME:-$ANDROID_SDK_ROOT}"/build-tools/*/aapt2 2>/dev/null | sort -V | tail -1 || true)
+          VC=$([ -n "$AAPT2" ] && "$AAPT2" dump badging "$OUTDIR/KhmerCalendar-${{ matrix.name }}.apk" | sed -n "s/.*versionCode='\([0-9]*\)'.*/\1/p" | head -1 || true)
+          echo "KhmerCalendar-${{ matrix.name }}.apk versionCode=${VC:-?}"
+          echo "::notice title=${{ matrix.name }}::versionCode ${VC:-?}"
       - uses: actions/upload-artifact@v4
         with:
-          name: android
-          path: khmer_calendar/build/app/outputs/flutter-apk/app-*-release.apk
+          name: android-${{ matrix.name }}
+          path: khmer_calendar/build/app/outputs/flutter-apk/KhmerCalendar-${{ matrix.name }}.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: android-symbols
+          name: android-symbols-${{ matrix.name }}
           path: khmer_calendar/build/symbols
-      - name: Publish dev pre-release (pushes only)
+      - name: Add to dev-latest pre-release (pushes only)
         if: github.event_name == 'push'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          OUTDIR=khmer_calendar/build/app/outputs/flutter-apk
-          for abi in armeabi-v7a arm64-v8a x86_64; do mv -f "$OUTDIR/app-$abi-release.apk" "$OUTDIR/KhmerCalendar-dev-$abi.apk"; done
-          gh release delete dev-latest --yes --cleanup-tag || true
-          gh release create dev-latest "$OUTDIR"/KhmerCalendar-dev-*.apk \
-            --target "$GITHUB_SHA" --title "Khmer Calendar DEV (build ${{ github.run_number }})" \
-            --notes "Dev build from main @ ${GITHUB_SHA::7}. One APK per ABI: arm64-v8a for almost every phone, armeabi-v7a for old 32-bit phones, x86_64 for emulators. Same package as production; uninstall the production app first if the signing key differs." \
-            --prerelease
+        run: gh release upload dev-latest "khmer_calendar/build/app/outputs/flutter-apk/KhmerCalendar-${{ matrix.name }}.apk" --clobber --repo "$GITHUB_REPOSITORY"

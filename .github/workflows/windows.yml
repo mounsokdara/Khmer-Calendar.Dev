@@ -1,4 +1,5 @@
-# Windows: build, Authenticode-sign, bundle the Visual C++ runtime and zip the app.
+# Windows: one package per architecture (x64, arm64). Build, Authenticode-sign, bundle the Visual C++ runtime and zip the app.
+# The arm64 leg is best-effort (continue-on-error) so it can never block the x64 release.
 # Also builds the Microsoft Store .msix when the Store identity variables are set.
 # Runs on its own (Actions tab > Run workflow) or is called by release.yml.
 name: Windows
@@ -12,8 +13,16 @@ permissions:
 
 jobs:
   windows:
-    runs-on: windows-latest
+    name: windows-${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    continue-on-error: ${{ matrix.experimental }}
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x64, runner: windows-latest, experimental: false }
+          - { arch: arm64, runner: windows-11-arm, experimental: true }
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -21,9 +30,11 @@ jobs:
           flutter-version: "3.47.4"
           channel: stable
           cache: true
+          # The Windows Flutter SDK is x64 only (it runs emulated on the arm64 runner); the app itself is built natively for matrix.arch.
+          architecture: x64
       - run: flutter pub get
         working-directory: khmer_calendar
-      - run: flutter build windows --release
+      - run: flutter build windows --release ${{ matrix.arch == 'arm64' && '--target-platform windows-arm64' || '' }}
         working-directory: khmer_calendar
         env:
           CXXFLAGS: /D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS
@@ -32,26 +43,26 @@ jobs:
         env:
           PFX_B64: ${{ secrets.DESKTOP_SIGN_PFX_BASE64 }}
           PFX_PASS: ${{ secrets.DESKTOP_SIGN_PASSWORD }}
-        run: ./scripts/sign-windows.ps1 -Dir khmer_calendar\build\windows\x64\runner\Release
+        run: ./scripts/sign-windows.ps1 -Dir khmer_calendar\build\windows\${{ matrix.arch }}\runner\Release
       # After signing on purpose: these are Microsoft-signed and must stay that way.
       - name: Bundle Visual C++ runtime (so it runs without the redistributable installed)
         shell: pwsh
-        run: ./scripts/bundle-vcruntime.ps1 -Dir khmer_calendar\build\windows\x64\runner\Release
+        run: ./scripts/bundle-vcruntime.ps1 -Dir khmer_calendar\build\windows\${{ matrix.arch }}\runner\Release -Arch ${{ matrix.arch }}
       - name: Pack windows
         shell: pwsh
-        run: Compress-Archive -Path khmer_calendar\build\windows\x64\runner\Release\* -DestinationPath KhmerCalendar-windows.zip
+        run: Compress-Archive -Path khmer_calendar\build\windows\${{ matrix.arch }}\runner\Release\* -DestinationPath KhmerCalendar-windows-${{ matrix.arch }}.zip
       - name: Verify package (runtime DLLs + icon)
         shell: pwsh
-        run: ./scripts/verify-windows.ps1 -Zip KhmerCalendar-windows.zip
+        run: ./scripts/verify-windows.ps1 -Zip KhmerCalendar-windows-${{ matrix.arch }}.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: windows
-          path: KhmerCalendar-windows.zip
+          name: windows-${{ matrix.arch }}
+          path: KhmerCalendar-windows-${{ matrix.arch }}.zip
       # Microsoft Store package. Needs the three values from Partner Center (Product >
       # Product identity) saved as repository variables: Settings > Secrets and variables >
       # Actions > Variables. Without them this step is skipped. See docs/WINDOWS-STORE.md.
       - name: Package for Microsoft Store (MSIX)
-        if: ${{ vars.MSIX_IDENTITY_NAME != '' && vars.MSIX_PUBLISHER != '' && vars.MSIX_PUBLISHER_DISPLAY_NAME != '' }}
+        if: ${{ matrix.arch == 'x64' && vars.MSIX_IDENTITY_NAME != '' && vars.MSIX_PUBLISHER != '' && vars.MSIX_PUBLISHER_DISPLAY_NAME != '' }}
         shell: pwsh
         working-directory: khmer_calendar
         env:
@@ -60,11 +71,11 @@ jobs:
           MSIX_PUBLISHER_DISPLAY_NAME: ${{ vars.MSIX_PUBLISHER_DISPLAY_NAME }}
         run: ../scripts/package-msix.ps1 -IdentityName $env:MSIX_IDENTITY_NAME -Publisher $env:MSIX_PUBLISHER -PublisherDisplayName $env:MSIX_PUBLISHER_DISPLAY_NAME -OutDir ${{ runner.temp }}\msix
       - name: MSIX skipped (no Store identity yet)
-        if: ${{ vars.MSIX_IDENTITY_NAME == '' || vars.MSIX_PUBLISHER == '' || vars.MSIX_PUBLISHER_DISPLAY_NAME == '' }}
+        if: ${{ matrix.arch == 'x64' && (vars.MSIX_IDENTITY_NAME == '' || vars.MSIX_PUBLISHER == '' || vars.MSIX_PUBLISHER_DISPLAY_NAME == '') }}
         shell: pwsh
         run: Write-Host "::notice title=MSIX skipped::Set repository variables MSIX_IDENTITY_NAME, MSIX_PUBLISHER, MSIX_PUBLISHER_DISPLAY_NAME (see docs/WINDOWS-STORE.md)"
       - uses: actions/upload-artifact@v4
-        if: ${{ vars.MSIX_IDENTITY_NAME != '' && vars.MSIX_PUBLISHER != '' && vars.MSIX_PUBLISHER_DISPLAY_NAME != '' }}
+        if: ${{ matrix.arch == 'x64' && vars.MSIX_IDENTITY_NAME != '' && vars.MSIX_PUBLISHER != '' && vars.MSIX_PUBLISHER_DISPLAY_NAME != '' }}
         with:
           name: windows-msix
           path: ${{ runner.temp }}\msix\*.msix

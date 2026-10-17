@@ -65,16 +65,30 @@ android {
     }
 }
 
-// Per-ABI version codes (F-Droid ABI split): armeabi-v7a -> 1, arm64-v8a -> 2, x86_64 -> 3,
-// and 0 for the universal APK, so every build of one version has a distinct, ordered code.
-val abiCodes = mapOf("armeabi-v7a" to 1, "arm64-v8a" to 2, "x86_64" to 3)
+// Version codes: every package is versionCode * 10 + one digit saying what is inside (F-Droid ABI split).
+// The base versionCode always comes from pubspec.yaml (1.0.4+5 -> 5), never from a CI run number.
+//   0 universal | 1 arm32 (armeabi-v7a) | 2 arm64 (arm64-v8a) | 3 x64 (x86_64)
+//   4 arm32_64 (arm + arm64) | 5 x86_x64 (x86 + x86_64) | 6 x86
+val abiCodes = mapOf("armeabi-v7a" to 1, "arm64-v8a" to 2, "x86_64" to 3, "x86" to 6)
+val targetPlatformCodes = mapOf(
+    setOf("android-arm") to 1,
+    setOf("android-arm64") to 2,
+    setOf("android-x64") to 3,
+    setOf("android-arm", "android-arm64") to 4,
+    setOf("android-x86", "android-x64") to 5,
+    setOf("android-x86") to 6,
+)
+// What `flutter build apk --target-platform ...` asked for (absent = the default set = universal).
+val builtTargets: Set<String>? = (project.findProperty("target-platform") as String?)
+    ?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }?.toSet()
 android.applicationVariants.configureEach {
     val variant = this
     variant.outputs.forEach { output ->
         val abi = output.filters.find { it.filterType == "ABI" }?.identifier
-        val abiVersionCode = if (abi == null) 0 else abiCodes[abi]
-        if (abiVersionCode != null) {
-            (output as ApkVariantOutputImpl).versionCodeOverride = variant.versionCode * 10 + abiVersionCode
+        // Split build: the ABI of this APK. Fat build: the targets that were requested (none -> universal).
+        val code = if (abi != null) abiCodes[abi] else (builtTargets?.let { targetPlatformCodes[it] } ?: 0)
+        if (code != null) {
+            (output as ApkVariantOutputImpl).versionCodeOverride = variant.versionCode * 10 + code
         }
     }
 }

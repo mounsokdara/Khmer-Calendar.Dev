@@ -2,7 +2,7 @@
 # starts on a clean Windows install that has no "Visual C++ Redistributable" yet.
 # Without them Windows shows: "MSVCP140.dll / VCRUNTIME140_1.dll was not found".
 #
-# Usage: ./bundle-vcruntime.ps1 -Dir <Release folder> -Exe khmer_calendar.exe
+# Usage: ./bundle-vcruntime.ps1 -Dir <Release folder> [-Exe khmer_calendar.exe] [-Arch x64|arm64]
 #
 # Run this AFTER Authenticode signing: these DLLs are already signed by Microsoft and
 # must keep that signature (do not re-sign them with our own certificate).
@@ -10,7 +10,8 @@
 # Visual C++ runtime DLL that is not in the folder.
 param(
   [Parameter(Mandatory = $true)][string]$Dir,
-  [string]$Exe = 'khmer_calendar.exe'
+  [string]$Exe = 'khmer_calendar.exe',
+  [ValidateSet('x64', 'arm64')][string]$Arch = 'x64'
 )
 $ErrorActionPreference = 'Stop'
 if (-not (Test-Path (Join-Path $Dir $Exe))) { throw "$Exe not found in $Dir" }
@@ -20,12 +21,12 @@ if (-not (Test-Path $vswhere)) { throw "vswhere.exe not found" }
 $vs = & $vswhere -latest -products * -property installationPath
 if (-not $vs) { throw "Visual Studio installation not found" }
 
-# ...\VC\Redist\MSVC\<version>\x64\Microsoft.VC14x.CRT   (release runtime, redistributable)
+# ...\VC\Redist\MSVC\<version>\<arch>\Microsoft.VC14x.CRT   (release runtime, redistributable)
 $crt = Get-ChildItem (Join-Path $vs 'VC\Redist\MSVC') -Directory |
   Where-Object { $_.Name -match '^\d' } | Sort-Object { [version]$_.Name } -Descending |
-  ForEach-Object { Get-ChildItem (Join-Path $_.FullName 'x64') -Directory -Filter 'Microsoft.VC*.CRT' -ErrorAction SilentlyContinue } |
+  ForEach-Object { Get-ChildItem (Join-Path $_.FullName $Arch) -Directory -Filter 'Microsoft.VC*.CRT' -ErrorAction SilentlyContinue } |
   Select-Object -First 1
-if (-not $crt) { throw "x64 Microsoft.VC*.CRT folder not found under $vs" }
+if (-not $crt) { throw "$Arch Microsoft.VC*.CRT folder not found under $vs" }
 Write-Host "Using runtime from $($crt.FullName)"
 
 $dlls = Get-ChildItem $crt.FullName -Filter *.dll
@@ -35,8 +36,10 @@ foreach ($need in 'msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll') {
 }
 
 # Check what the app really imports. dumpbin ships with the same Visual Studio.
-$dumpbin = Get-ChildItem (Join-Path $vs 'VC\Tools\MSVC') -Recurse -Filter dumpbin.exe -ErrorAction SilentlyContinue |
-  Where-Object { $_.FullName -match 'Hostx64\\x64' } | Select-Object -First 1
+$dumpbins = @(Get-ChildItem (Join-Path $vs 'VC\Tools\MSVC') -Recurse -Filter dumpbin.exe -ErrorAction SilentlyContinue)
+# Any host works for reading imports; prefer the x64 one (runs natively on x64 and emulated on arm64).
+$dumpbin = ($dumpbins | Where-Object { $_.FullName -match 'Hostx64\\x64' } | Select-Object -First 1)
+if (-not $dumpbin) { $dumpbin = $dumpbins | Select-Object -First 1 }
 if (-not $dumpbin) {
   Write-Warning "dumpbin.exe not found - dependency check skipped"
 } else {

@@ -17,8 +17,17 @@ jobs:
     secrets: inherit
 
   linux:
-    runs-on: ubuntu-latest
+    name: linux-${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    # The arm64 leg is best-effort so it can never block the x64 release.
+    continue-on-error: ${{ matrix.experimental }}
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x64, runner: ubuntu-latest, experimental: false }
+          - { arch: arm64, runner: ubuntu-24.04-arm, experimental: true }
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -36,11 +45,11 @@ jobs:
         working-directory: khmer_calendar
       - name: Pack linux
         run: |
-          tar -C khmer_calendar/build/linux/x64/release/bundle -czf KhmerCalendar-linux.tar.gz .
+          tar -C khmer_calendar/build/linux/${{ matrix.arch }}/release/bundle -czf KhmerCalendar-linux-${{ matrix.arch }}.tar.gz .
       - uses: actions/upload-artifact@v4
         with:
-          name: linux
-          path: KhmerCalendar-linux.tar.gz
+          name: linux-${{ matrix.arch }}
+          path: KhmerCalendar-linux-${{ matrix.arch }}.tar.gz
 
   windows:
     uses: ./.github/workflows/windows.yml
@@ -98,14 +107,8 @@ jobs:
       - name: Stage files
         run: |
           mkdir -p release-files
-          cp dist/android/app-armeabi-v7a-release.apk release-files/KhmerCalendar-armeabi-v7a.apk
-          cp dist/android/app-arm64-v8a-release.apk release-files/KhmerCalendar-arm64-v8a.apk
-          cp dist/android/app-x86_64-release.apk release-files/KhmerCalendar-x86_64.apk
-          cp dist/windows/KhmerCalendar-windows.zip release-files/KhmerCalendar-windows.zip
-          cp dist/macos/KhmerCalendar.dmg release-files/KhmerCalendar.dmg
-          cp dist/linux/KhmerCalendar-linux.tar.gz release-files/KhmerCalendar-linux.tar.gz
-          cp dist/project/KhmerCalendar-project.zip release-files/KhmerCalendar-project.zip
-          cp dist/web/KhmerCalendar-web.zip release-files/KhmerCalendar-web.zip
+          # Every package job uploads its own file named KhmerCalendar-<os/arch>.<ext>; publish them as separate assets.
+          find dist -type f -name 'KhmerCalendar-*' ! -name '*.idsig' -exec cp -t release-files {} +
           ls -lh release-files
       - name: Publish GitHub Release
         env:
@@ -117,15 +120,7 @@ jobs:
           NOTES_FILE=".github/release-body.md"
           echo "Publishing ${TAG}"
           gh release delete "$TAG" --yes --cleanup-tag || true
-          gh release create "$TAG" \
-            release-files/KhmerCalendar-armeabi-v7a.apk \
-            release-files/KhmerCalendar-arm64-v8a.apk \
-            release-files/KhmerCalendar-x86_64.apk \
-            release-files/KhmerCalendar-windows.zip \
-            release-files/KhmerCalendar.dmg \
-            release-files/KhmerCalendar-linux.tar.gz \
-            release-files/KhmerCalendar-project.zip \
-            release-files/KhmerCalendar-web.zip \
+          gh release create "$TAG" release-files/* \
             --target "$GITHUB_SHA" \
             --title "Khmer Calendar $TAG" \
             --notes-file "$NOTES_FILE" \
