@@ -6,9 +6,18 @@ name: Android
 on:
   workflow_call:
   workflow_dispatch:
+  # Dev: every push to main builds the split APKs and refreshes the "dev-latest" pre-release.
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**/*.md"
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   android:
@@ -35,7 +44,9 @@ jobs:
         working-directory: khmer_calendar
       # arm + arm64 cover every real phone (x86_64 is emulators only, ~1/3 of the old size).
       # --split-debug-info strips debug symbols from libapp.so; symbols are kept as an artifact.
-      - run: flutter build apk --release --split-per-abi --target-platform android-arm,android-arm64,android-x64 --split-debug-info=build/symbols
+      # Pushes get an increasing build number (run number) so each dev build installs over the last one;
+      # release runs keep the version code from pubspec.yaml.
+      - run: flutter build apk --release --split-per-abi --target-platform android-arm,android-arm64,android-x64 --split-debug-info=build/symbols ${{ github.event_name == 'push' && format('--build-number={0}', github.run_number) || '' }}
         working-directory: khmer_calendar
         env:
           ANDROID_KEYSTORE: ${{ runner.temp }}/khmer-release.keystore
@@ -61,3 +72,15 @@ jobs:
         with:
           name: android-symbols
           path: khmer_calendar/build/symbols
+      - name: Publish dev pre-release (pushes only)
+        if: github.event_name == 'push'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          OUTDIR=khmer_calendar/build/app/outputs/flutter-apk
+          for abi in armeabi-v7a arm64-v8a x86_64; do mv -f "$OUTDIR/app-$abi-release.apk" "$OUTDIR/KhmerCalendar-dev-$abi.apk"; done
+          gh release delete dev-latest --yes --cleanup-tag || true
+          gh release create dev-latest "$OUTDIR"/KhmerCalendar-dev-*.apk \
+            --target "$GITHUB_SHA" --title "Khmer Calendar DEV (build ${{ github.run_number }})" \
+            --notes "Dev build from main @ ${GITHUB_SHA::7}. One APK per ABI: arm64-v8a for almost every phone, armeabi-v7a for old 32-bit phones, x86_64 for emulators. Same package as production; uninstall the production app first if the signing key differs." \
+            --prerelease
