@@ -69,7 +69,7 @@ void syncWidgetTheme(AppStore store, ColorScheme light, ColorScheme dark) {
   if (!canPinHomeWidget) return;
   String hex(Color c) => '#${c.toARGB32().toRadixString(16).padLeft(8, '0')}';
   String palette(ColorScheme cs, bool isDark) => jsonEncode({
-        'surface': hex(cs.surfaceContainer),
+        'surface': hex(cs.surface),
         'onSurface': hex(cs.onSurface),
         'onVariant': hex(cs.onSurfaceVariant),
         'primary': hex(cs.primary),
@@ -86,6 +86,28 @@ void syncWidgetTheme(AppStore store, ColorScheme light, ColorScheme dark) {
   if (sig == _themeSig) return;
   _themeSig = sig;
   _ch.invokeMethod<void>('updateWidget', {'wp_light': lightJson, 'wp_dark': darkJson, 'wp_mode': mode}).catchError((_) {});
+}
+
+final Map<bool, String> _monthInfoCache = {};
+
+/// "Year of the horse, era, B.E." line for every month the widget can page to (1900-2100),
+/// taken from the middle of each month so it never straddles Khmer New Year.
+String _monthInfoJson(Lang lang) {
+  final en = lang == Lang.en;
+  return _monthInfoCache[en] ??= () {
+    final out = <String, String>{};
+    for (var y = 1900; y <= 2100; y++) {
+      for (var m = 1; m <= 12; m++) {
+        try {
+          final lu = lunarOf(DateTime(y, m, 15));
+          out['${y.toString().padLeft(4, '0')}-${m.toString().padLeft(2, '0')}'] = en
+              ? '${zodiacEn[lu.animalYear] ?? lu.animalYear} year · B.E. ${lu.buddhistEraYear}'
+              : 'ឆ្នាំ${lu.animalYear} ${lu.sak} ព.ស. ${lu.buddhistEraYearKhmer}';
+        } catch (_) {}
+      }
+    }
+    return jsonEncode(out);
+  }();
 }
 
 bool _syncBusy = false;
@@ -312,6 +334,7 @@ Future<Map<String, dynamic>> _buildWidgetDisplay(AppStore store) async {
         ? '${now.day} ${monthsEn[now.month - 1]} ${now.year} CE'
         : '${lunar.gregorianDayText} ${lunar.gregorianMonthText} គ.ស ${lunar.gregorianYearText}',
     'title': t(lang, 'appName'),
+    'month_info': _monthInfoJson(lang),
     'days': data.daysJson,
     'marks': jsonEncode(marks),
     'names': jsonEncode(names),

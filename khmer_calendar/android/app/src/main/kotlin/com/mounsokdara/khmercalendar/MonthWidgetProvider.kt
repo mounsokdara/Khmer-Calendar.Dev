@@ -9,7 +9,6 @@ import android.content.Intent
 import android.graphics.Typeface
 import android.text.SpannableString
 import android.text.Spanned
-import android.text.style.AbsoluteSizeSpan
 import android.text.style.StyleSpan
 import android.view.View
 import android.widget.RemoteViews
@@ -133,6 +132,7 @@ class MonthWidgetProvider : AppWidgetProvider() {
             }
         }
 
+        @Suppress("unused")
         private fun names(context: Context): JSONObject {
             val raw = WidgetStore.prefs(context).getString("names", null) ?: return JSONObject()
             return try {
@@ -154,13 +154,25 @@ class MonthWidgetProvider : AppWidgetProvider() {
             return context.resources.getIdentifier("head_$i", "id", context.packageName)
         }
 
-        private fun cellLabel(day: Int, name: String, bold: Boolean): CharSequence {
-            val num = day.toString()
-            val s = SpannableString(if (name.isEmpty()) num else "$num\n$name")
-            if (name.isNotEmpty()) {
-                s.setSpan(AbsoluteSizeSpan(8, true), num.length + 1, s.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        private fun ringId(context: Context, i: Int): Int {
+            return context.resources.getIdentifier("ring_$i", "id", context.packageName)
+        }
+
+        private val HEAD_KM = arrayOf("អាទិត្យ", "ចន្ទ", "អង្គារ", "ពុធ", "ព្រហ.", "សុក្រ", "សៅរ៍")
+        private val HEAD_EN = arrayOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+
+        private fun monthSub(context: Context, year: Int, month: Int): String {
+            val raw = WidgetStore.prefs(context).getString("month_info", null) ?: return ""
+            return try {
+                JSONObject(raw).optString("%04d-%02d".format(year, month), "")
+            } catch (_: Exception) {
+                ""
             }
-            if (bold) s.setSpan(StyleSpan(Typeface.BOLD), 0, num.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+
+        private fun cellLabel(text: String, bold: Boolean): CharSequence {
+            val s = SpannableString(text)
+            if (bold) s.setSpan(StyleSpan(Typeface.BOLD), 0, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             return s
         }
 
@@ -170,21 +182,21 @@ class MonthWidgetProvider : AppWidgetProvider() {
             val weekStart = WidgetStore.weekStartsOn(context)
             val (year, month) = shown(context, widgetId)
             val months = if (lang == "en") WidgetStore.MONTHS_EN else WidgetStore.MONTHS_KM
-            val short = if (lang == "en") WidgetStore.WEEK_SHORT_EN else WidgetStore.WEEK_SHORT_KM
+            val short = if (lang == "en") HEAD_EN else HEAD_KM
             val markMap = marks(context)
-            val nameMap = names(context)
             val pal = WidgetTheme.load(context)
             WidgetTheme.tint(context, views, pal, R.id.month_bg) { it.surface }
             for (id in intArrayOf(R.id.year_prev, R.id.year_next, R.id.month_prev, R.id.month_next, R.id.month_today)) {
                 WidgetTheme.text(context, views, pal, id) { it.primary }
             }
-            WidgetTheme.text(context, views, pal, R.id.month_year) { it.onSurface }
             WidgetTheme.text(context, views, pal, R.id.month_name) { it.onSurface }
+            WidgetTheme.text(context, views, pal, R.id.month_sub) { it.onVariant }
+            val monthName = months[(month - 1).coerceIn(0, 11)]
             views.setTextViewText(
-                R.id.month_year,
-                if (lang == "en") "$year CE" else "គ.ស ${WidgetTheme.khmerNum(year)}",
+                R.id.month_name,
+                if (lang == "en") "$monthName $year" else "$monthName គ.ស ${WidgetTheme.khmerNum(year)}",
             )
-            views.setTextViewText(R.id.month_name, months[(month - 1).coerceIn(0, 11)])
+            views.setTextViewText(R.id.month_sub, monthSub(context, year, month))
             views.setTextViewText(R.id.month_today, if (lang == "en") "Today" else "ថ្ងៃនេះ")
             val today = Calendar.getInstance()
             val onThisMonth =
@@ -207,15 +219,16 @@ class MonthWidgetProvider : AppWidgetProvider() {
                 val flags = markMap.optString(isoOf(d), "")
                 val sunday = d.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY
                 val id = cellId(context, i)
-                val name = if (inMonth) nameMap.optString(isoOf(d), "") else ""
-                views.setTextViewText(id, cellLabel(d.get(Calendar.DAY_OF_MONTH), name, isToday))
-                views.setInt(id, "setMaxLines", 3)
+                val dayNum = d.get(Calendar.DAY_OF_MONTH)
+                views.setTextViewText(id, cellLabel(if (lang == "en") dayNum.toString() else WidgetTheme.khmerNum(dayNum), false))
+                val ring = ringId(context, i)
+                views.setViewVisibility(ring, if (isToday) View.VISIBLE else View.GONE)
+                if (isToday) WidgetTheme.tint(context, views, pal, ring) { it.primary }
                 val pick: (WidgetTheme.Tones) -> Int =
                     when {
                         !inMonth -> { t -> t.dim() }
                         flags.contains('p') || sunday -> { t -> t.publicDay }
                         flags.contains('h') -> { t -> t.holiday }
-                        isToday -> { t -> t.primary }
                         else -> { t -> t.onSurface }
                     }
                 WidgetTheme.text(context, views, pal, id, pick)
@@ -235,7 +248,6 @@ class MonthWidgetProvider : AppWidgetProvider() {
             views.setOnClickPendingIntent(R.id.month_today, shiftPi(context, widgetId, "today", 0, 5))
             val openCalendar = WidgetStore.launch(context, "calendar")
             views.setOnClickPendingIntent(R.id.month_root, openCalendar)
-            views.setOnClickPendingIntent(R.id.month_year, openCalendar)
             views.setOnClickPendingIntent(R.id.month_name, openCalendar)
             return views
         }
