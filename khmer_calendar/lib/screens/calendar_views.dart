@@ -396,21 +396,20 @@ class _MiniGridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final colW = size.width / 7;
-    final circle = Paint()
-      ..color = fill
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.6;
+    final circle = Paint()..color = fill;
     for (var d = 1; d <= days; d++) {
       final idx = firstOffset + d - 1;
       final c = idx % 7;
       final center = Offset((c + 0.5) * colW, (idx ~/ 7 + 0.5) * rowH);
       final isToday = d == todayDay;
-      if (isToday) canvas.drawCircle(center, rowH / 2 - 0.8, circle);
-      final color = publicDays.contains(d) || c == sunAt
-          ? red
-          : holidayDays.contains(d)
-              ? holidayColor
-              : normal;
+      if (isToday) canvas.drawCircle(center, rowH / 2, circle);
+      final color = isToday
+          ? onFill
+          : publicDays.contains(d) || c == sunAt
+              ? red
+              : holidayDays.contains(d)
+                  ? holidayColor
+                  : normal;
       final tp = _label(d, color, fontSize, isToday);
       tp.paint(canvas, center - Offset(tp.width / 2, tp.height / 2));
     }
@@ -707,13 +706,13 @@ class _WeekDayRow extends StatelessWidget {
                         width: 38,
                         height: 38,
                         alignment: Alignment.center,
-                        decoration: todayStyle != null ? BoxDecoration(shape: BoxShape.circle, border: Border.all(color: todayStyle.fill, width: 2)) : null,
+                        decoration: todayStyle != null ? BoxDecoration(color: todayStyle.fill, shape: BoxShape.circle) : null,
                         child: Text(
                           '${day.day}',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w600,
-                            color: tone,
+                            color: todayStyle?.onFill ?? tone,
                           ),
                         ),
                       ),
