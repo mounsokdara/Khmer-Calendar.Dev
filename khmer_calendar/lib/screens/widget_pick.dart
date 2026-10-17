@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../home_screen.dart';
 import '../store.dart';
 import '../widgets/wheel_picker.dart';
 
@@ -63,6 +64,9 @@ class _WidgetPickPageState extends State<WidgetPickPage> {
           'year': picked.year,
           'month': picked.month,
         });
+        // Load marks/month-info for the year we just set, not the whole calendar range.
+        invalidateHomeWidgetCache();
+        await syncHomeWidget(widget.store);
       } catch (_) {}
     }
     await SystemNavigator.pop();
