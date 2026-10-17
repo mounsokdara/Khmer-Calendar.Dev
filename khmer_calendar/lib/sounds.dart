@@ -47,8 +47,6 @@ class WheelConfig {
   }
 
   int get minGapMs => (wheel['min_gap_ms'] as num?)?.toInt() ?? 45;
-  int get maxLivePlayers => (wheel['max_live_players'] as num?)?.toInt() ?? 3;
-  int get maxLifetimeMs => (wheel['max_lifetime_ms'] as num?)?.toInt() ?? 3000;
   int get customMaxBytes => (wheel['custom_max_bytes'] as num?)?.toInt() ?? 1024 * 1024;
   Map<String, dynamic>? sound(String id) {
     final sounds = raw['sounds'];
@@ -162,14 +160,6 @@ class AppSounds {
     } catch (e) {
       debugPrint('wheel sound failed: $e');
     }
-  }
-
-  Future<void> _stop() async {
-    final player = _player;
-    if (player == null) return;
-    try {
-      await player.stop();
-    } catch (_) {}
   }
 
   Future<Source?> _sourceFor(String id, WheelConfig config) async {

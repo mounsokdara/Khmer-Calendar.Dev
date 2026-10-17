@@ -5,6 +5,5 @@
     <color name="widget_bg_top">#FF4C79A8</color>
     <color name="widget_bg_bottom">#FF2B4E78</color>
     <color name="widget_stroke">#26FFFFFF</color>
-    <color name="widget_chip">#33FFFFFF</color>
     <color name="widget_holiday_chip">#40FFD54F</color>
 </resources>

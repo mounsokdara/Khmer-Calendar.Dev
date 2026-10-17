@@ -1,8 +1,6 @@
 {
   "wheel": {
     "min_gap_ms": 25,
-    "max_live_players": 1,
-    "max_lifetime_ms": 3000,
     "custom_max_bytes": 1048576
   },
   "sounds": [
