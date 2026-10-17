@@ -5,10 +5,6 @@ import '../dates.dart';
 import '../i18n.dart';
 import '../store.dart';
 
-/// Years the home-screen month widget has marks/holiday data for.
-const widgetYearMin = 1900;
-const widgetYearMax = 2100;
-
 /// The month + year scroll picker dialog. Returns the first day of the chosen month, or null if cancelled.
 ///
 /// [minYear]/[maxYear] bound the year column (defaults to the full calendar range).

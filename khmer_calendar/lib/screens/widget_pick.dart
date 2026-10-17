@@ -55,8 +55,6 @@ class _WidgetPickPageState extends State<WidgetPickPage> {
       lang: widget.store.lang,
       year: widget.year,
       month: widget.month,
-      minYear: widgetYearMin,
-      maxYear: widgetYearMax,
     );
     if (picked != null) {
       try {
