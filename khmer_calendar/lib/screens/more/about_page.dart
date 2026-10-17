@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' as services;
 import 'package:go_router/go_router.dart';
@@ -9,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../i18n.dart';
 import '../../store.dart';
 import '../../theme.dart';
+import '../../web_refresh.dart';
 import '../../widgets/overlay_page.dart';
 import '../../widgets/segmented_list.dart';
 import 'update_checker.dart';
@@ -371,7 +373,7 @@ Future<void> _checkForUpdate(BuildContext context, Lang lang) async {
   UpdateInfo? update;
   String? error;
   try {
-    update = await checkForAppUpdate();
+    update = kIsWeb ? await checkForWebUpdate() : await checkForAppUpdate();
   } on services.PlatformException {
     error = lang == Lang.km ? 'មិនអាចពិនិត្យកំណែថ្មីបានទេ។' : 'Unable to check for updates.';
   } catch (_) {
@@ -399,7 +401,14 @@ Future<void> _checkForUpdate(BuildContext context, Lang lang) async {
       builder: (d) => AlertDialog(
         title: Text(lang == Lang.km ? 'កំណែថ្មី' : 'Updates'),
         content: Text(lang == Lang.km ? 'កម្មវិធីរបស់អ្នកជាកំណែថ្មីបំផុត។' : 'You are using the latest version.'),
-        actions: [TextButton(onPressed: () => Navigator.pop(d), child: Text(lang == Lang.km ? 'យល់ព្រម' : 'OK'))],
+        actions: [
+          if (kIsWeb)
+            TextButton(
+              onPressed: () => cleanAndReloadWeb(),
+              child: Text(lang == Lang.km ? 'សម្អាត និងទាញយកថ្មី' : 'Clean & reload'),
+            ),
+          TextButton(onPressed: () => Navigator.pop(d), child: Text(lang == Lang.km ? 'យល់ព្រម' : 'OK')),
+        ],
       ),
     );
     return;
@@ -410,18 +419,30 @@ Future<void> _checkForUpdate(BuildContext context, Lang lang) async {
     builder: (d) => AlertDialog(
       title: Text(lang == Lang.km ? 'មានកំណែថ្មី' : 'Update available'),
       content: Text(
-        lang == Lang.km
-            ? 'មានកំណែ ${update!.version}។ កំណែបច្ចុប្បន្នគឺ $currentAppVersion។'
-            : 'Version ${update!.version} is available. You are using $currentAppVersion.',
+        kIsWeb
+            ? (lang == Lang.km
+                ? 'មានកំណែ ${update!.version}។ ការធ្វើបច្ចុប្បន្នភាពនឹងសម្អាតឯកសារដែលបានរក្សាទុក ហើយទាញយកថ្មីម្តងទៀត។ ការកំណត់របស់អ្នកនៅដដែល។'
+                : 'Version ${update!.version} is available. Updating clears cached files and downloads the latest assets and scripts again. Your settings are kept.')
+            : lang == Lang.km
+                ? 'មានកំណែ ${update!.version}។ កំណែបច្ចុប្បន្នគឺ $currentAppVersion។'
+                : 'Version ${update!.version} is available. You are using $currentAppVersion.',
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(d), child: Text(lang == Lang.km ? 'បិទ' : 'Close')),
         FilledButton(
           onPressed: () async {
+            if (kIsWeb) {
+              await cleanAndReloadWeb();
+              return;
+            }
             await openLatestRelease(update!.url);
             if (d.mounted) Navigator.pop(d);
           },
-          child: Text(lang == Lang.km ? 'មើលកំណែថ្មី' : 'View update'),
+          child: Text(
+            kIsWeb
+                ? (lang == Lang.km ? 'ធ្វើបច្ចុប្បន្នភាព' : 'Update now')
+                : (lang == Lang.km ? 'មើលកំណែថ្មី' : 'View update'),
+          ),
         ),
       ],
     ),

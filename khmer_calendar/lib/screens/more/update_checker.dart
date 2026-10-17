@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../theme.dart' show appVersion;
+import '../../web_refresh.dart';
 
 const currentAppVersion = appVersion;
 const latestReleaseUrl = 'https://github.com/mounsokdara/Khmer-Calendar/releases/latest';
@@ -28,6 +29,14 @@ Future<UpdateInfo?> checkForAppUpdate() async {
   final latest = tag.replaceFirst(RegExp(r'^v'), '');
   if (_compareVersions(latest, currentAppVersion) <= 0) return null;
   return UpdateInfo(version: latest, url: url);
+}
+
+/// Web: compares against the version deployed on the site itself (no GitHub involved).
+Future<UpdateInfo?> checkForWebUpdate() async {
+  final deployed = await deployedWebVersion();
+  if (deployed == null || deployed.isEmpty) return null;
+  if (_compareVersions(deployed, currentAppVersion) <= 0) return null;
+  return UpdateInfo(version: deployed, url: '');
 }
 
 int _compareVersions(String a, String b) {

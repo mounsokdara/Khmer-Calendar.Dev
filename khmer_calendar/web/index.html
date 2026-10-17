@@ -52,6 +52,44 @@
         }
       };
 
+      // Web "update": instead of sending people to GitHub, clear what the browser cached for this
+      // site (service workers, Cache Storage) and download the app files again. User data (settings,
+      // reminders) lives in localStorage and is not touched.
+      window.__khmerRefresh = {
+        deployedVersion: async function () {
+          try {
+            var r = await fetch('version.json?cb=' + Date.now(), { cache: 'no-store' });
+            if (!r.ok) return null;
+            var j = await r.json();
+            return j && j.version ? String(j.version) : null;
+          } catch (_) {
+            return null;
+          }
+        },
+        cleanAndReload: async function () {
+          try {
+            if ('serviceWorker' in navigator) {
+              var regs = await navigator.serviceWorker.getRegistrations();
+              await Promise.all(regs.map(function (r) { return r.unregister(); }));
+            }
+          } catch (_) {}
+          try {
+            if (window.caches) {
+              var keys = await caches.keys();
+              await Promise.all(keys.map(function (k) { return caches.delete(k); }));
+            }
+          } catch (_) {}
+          try {
+            var files = ['./', 'index.html', 'flutter.js', 'flutter_bootstrap.js', 'main.dart.js',
+              'manifest.json', 'version.json', 'offline.js', 'flutter_service_worker.js'];
+            await Promise.all(files.map(function (f) {
+              return fetch(f, { cache: 'reload' }).catch(function () {});
+            }));
+          } catch (_) {}
+          window.location.reload();
+        }
+      };
+
       window.__khmerInstall = {
         deferred: null,
         isStandalone: function () {

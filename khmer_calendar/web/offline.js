@@ -63,6 +63,18 @@ async function cacheFirst(request, fallbackIndex) {
   }
 }
 
+async function networkFirst(request) {
+  try {
+    const res = await fetch(request, { cache: 'no-store' });
+    store(request, res);
+    return res;
+  } catch (e) {
+    const cached = await caches.match(request, { ignoreSearch: true });
+    if (cached) return cached;
+    throw e;
+  }
+}
+
 async function networkOnly(request) {
   return fetch(request);
 }
@@ -80,6 +92,10 @@ self.addEventListener('fetch', (event) => {
   if (!shouldHandle(url)) return;
   if (isWeatherApi(url)) {
     event.respondWith(networkOnly(request));
+    return;
+  }
+  if (url.pathname.endsWith('/version.json')) {
+    event.respondWith(networkFirst(request));
     return;
   }
   const nav = request.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('/index.html');
