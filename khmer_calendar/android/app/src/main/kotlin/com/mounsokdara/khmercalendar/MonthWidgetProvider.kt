@@ -6,10 +6,9 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.graphics.Typeface
 import android.text.SpannableString
 import android.text.Spanned
-import android.text.style.StyleSpan
+import android.text.style.AbsoluteSizeSpan
 import android.view.View
 import android.widget.RemoteViews
 import org.json.JSONObject
@@ -132,7 +131,6 @@ class MonthWidgetProvider : AppWidgetProvider() {
             }
         }
 
-        @Suppress("unused")
         private fun names(context: Context): JSONObject {
             val raw = WidgetStore.prefs(context).getString("names", null) ?: return JSONObject()
             return try {
@@ -170,9 +168,10 @@ class MonthWidgetProvider : AppWidgetProvider() {
             }
         }
 
-        private fun cellLabel(text: String, bold: Boolean): CharSequence {
-            val s = SpannableString(text)
-            if (bold) s.setSpan(StyleSpan(Typeface.BOLD), 0, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        private fun cellLabel(num: String, name: String): CharSequence {
+            if (name.isEmpty()) return num
+            val s = SpannableString("$num\n$name")
+            s.setSpan(AbsoluteSizeSpan(8, true), num.length + 1, s.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             return s
         }
 
@@ -184,6 +183,7 @@ class MonthWidgetProvider : AppWidgetProvider() {
             val months = if (lang == "en") WidgetStore.MONTHS_EN else WidgetStore.MONTHS_KM
             val short = if (lang == "en") HEAD_EN else HEAD_KM
             val markMap = marks(context)
+            val nameMap = names(context)
             val pal = WidgetTheme.load(context)
             WidgetTheme.tint(context, views, pal, R.id.month_bg) { it.surface }
             for (id in intArrayOf(R.id.year_prev, R.id.year_next, R.id.month_prev, R.id.month_next, R.id.month_today)) {
@@ -220,7 +220,9 @@ class MonthWidgetProvider : AppWidgetProvider() {
                 val sunday = d.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY
                 val id = cellId(context, i)
                 val dayNum = d.get(Calendar.DAY_OF_MONTH)
-                views.setTextViewText(id, cellLabel(if (lang == "en") dayNum.toString() else WidgetTheme.khmerNum(dayNum), false))
+                val name = if (inMonth) nameMap.optString(isoOf(d), "") else ""
+                views.setTextViewText(id, cellLabel(if (lang == "en") dayNum.toString() else WidgetTheme.khmerNum(dayNum), name))
+                views.setInt(id, "setMaxLines", 3)
                 val ring = ringId(context, i)
                 views.setViewVisibility(ring, if (isToday) View.VISIBLE else View.GONE)
                 if (isToday) WidgetTheme.tint(context, views, pal, ring) { it.primary }

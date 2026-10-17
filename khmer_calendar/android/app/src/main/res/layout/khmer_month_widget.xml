@@ -99,7 +99,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_0" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_0" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_0"
                 android:layout_width="match_parent"
@@ -107,13 +107,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_0"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -124,7 +125,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_1" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_1" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_1"
                 android:layout_width="match_parent"
@@ -132,13 +133,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_1"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -149,7 +151,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_2" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_2" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_2"
                 android:layout_width="match_parent"
@@ -157,13 +159,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_2"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -174,7 +177,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_3" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_3" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_3"
                 android:layout_width="match_parent"
@@ -182,13 +185,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_3"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -199,7 +203,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_4" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_4" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_4"
                 android:layout_width="match_parent"
@@ -207,13 +211,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_4"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -224,7 +229,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_5" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_5" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_5"
                 android:layout_width="match_parent"
@@ -232,13 +237,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_5"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -249,7 +255,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_6" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_6" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_6"
                 android:layout_width="match_parent"
@@ -257,13 +263,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_6"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -276,7 +283,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_7" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_7" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_7"
                 android:layout_width="match_parent"
@@ -284,13 +291,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_7"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -301,7 +309,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_8" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_8" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_8"
                 android:layout_width="match_parent"
@@ -309,13 +317,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_8"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -326,7 +335,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_9" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_9" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_9"
                 android:layout_width="match_parent"
@@ -334,13 +343,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_9"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -351,7 +361,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_10" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_10" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_10"
                 android:layout_width="match_parent"
@@ -359,13 +369,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_10"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -376,7 +387,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_11" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_11" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_11"
                 android:layout_width="match_parent"
@@ -384,13 +395,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_11"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -401,7 +413,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_12" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_12" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_12"
                 android:layout_width="match_parent"
@@ -409,13 +421,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_12"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -426,7 +439,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_13" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_13" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_13"
                 android:layout_width="match_parent"
@@ -434,13 +447,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_13"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -453,7 +467,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_14" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_14" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_14"
                 android:layout_width="match_parent"
@@ -461,13 +475,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_14"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -478,7 +493,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_15" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_15" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_15"
                 android:layout_width="match_parent"
@@ -486,13 +501,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_15"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -503,7 +519,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_16" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_16" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_16"
                 android:layout_width="match_parent"
@@ -511,13 +527,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_16"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -528,7 +545,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_17" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_17" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_17"
                 android:layout_width="match_parent"
@@ -536,13 +553,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_17"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -553,7 +571,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_18" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_18" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_18"
                 android:layout_width="match_parent"
@@ -561,13 +579,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_18"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -578,7 +597,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_19" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_19" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_19"
                 android:layout_width="match_parent"
@@ -586,13 +605,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_19"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -603,7 +623,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_20" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_20" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_20"
                 android:layout_width="match_parent"
@@ -611,13 +631,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_20"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -630,7 +651,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_21" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_21" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_21"
                 android:layout_width="match_parent"
@@ -638,13 +659,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_21"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -655,7 +677,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_22" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_22" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_22"
                 android:layout_width="match_parent"
@@ -663,13 +685,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_22"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -680,7 +703,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_23" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_23" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_23"
                 android:layout_width="match_parent"
@@ -688,13 +711,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_23"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -705,7 +729,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_24" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_24" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_24"
                 android:layout_width="match_parent"
@@ -713,13 +737,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_24"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -730,7 +755,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_25" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_25" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_25"
                 android:layout_width="match_parent"
@@ -738,13 +763,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_25"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -755,7 +781,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_26" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_26" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_26"
                 android:layout_width="match_parent"
@@ -763,13 +789,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_26"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -780,7 +807,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_27" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_27" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_27"
                 android:layout_width="match_parent"
@@ -788,13 +815,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_27"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -807,7 +835,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_28" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_28" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_28"
                 android:layout_width="match_parent"
@@ -815,13 +843,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_28"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -832,7 +861,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_29" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_29" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_29"
                 android:layout_width="match_parent"
@@ -840,13 +869,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_29"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -857,7 +887,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_30" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_30" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_30"
                 android:layout_width="match_parent"
@@ -865,13 +895,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_30"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -882,7 +913,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_31" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_31" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_31"
                 android:layout_width="match_parent"
@@ -890,13 +921,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_31"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -907,7 +939,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_32" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_32" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_32"
                 android:layout_width="match_parent"
@@ -915,13 +947,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_32"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -932,7 +965,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_33" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_33" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_33"
                 android:layout_width="match_parent"
@@ -940,13 +973,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_33"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -957,7 +991,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_34" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_34" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_34"
                 android:layout_width="match_parent"
@@ -965,13 +999,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_34"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -984,7 +1019,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_35" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_35" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_35"
                 android:layout_width="match_parent"
@@ -992,13 +1027,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_35"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -1009,7 +1045,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_36" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_36" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_36"
                 android:layout_width="match_parent"
@@ -1017,13 +1053,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_36"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -1034,7 +1071,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_37" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_37" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_37"
                 android:layout_width="match_parent"
@@ -1042,13 +1079,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_37"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -1059,7 +1097,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_38" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_38" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_38"
                 android:layout_width="match_parent"
@@ -1067,13 +1105,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_38"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -1084,7 +1123,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_39" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_39" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_39"
                 android:layout_width="match_parent"
@@ -1092,13 +1131,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_39"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -1109,7 +1149,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_40" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_40" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_40"
                 android:layout_width="match_parent"
@@ -1117,13 +1157,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_40"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"
@@ -1134,7 +1175,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView android:id="@id/ring_41" android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
+            <ImageView android:id="@id/ring_41" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="top|center_horizontal" android:layout_marginTop="4dp" android:contentDescription="@null" android:src="@drawable/widget_today_ring" android:visibility="gone" />
             <TextView
                 android:id="@id/cell_41"
                 android:layout_width="match_parent"
@@ -1142,13 +1183,14 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:textSize="17sp" />
+                android:gravity="center_horizontal|top"
+                android:paddingTop="6dp"
+                android:maxLines="3"
+                android:textSize="16sp" />
             <ImageView
                 android:id="@id/sil_41"
-                android:layout_width="11dp"
-                android:layout_height="11dp"
+                android:layout_width="9dp"
+                android:layout_height="9dp"
                 android:layout_gravity="top|center_horizontal"
                 android:layout_marginTop="0dp"
                 android:contentDescription="@null"

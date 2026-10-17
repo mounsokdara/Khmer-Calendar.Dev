@@ -586,8 +586,9 @@ class _DayCell extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final color = dayToneColor(context, tone);
     final todayStyle = isToday ? todayColors(context, tone) : null;
-    final fill = todayStyle?.fill ?? Colors.transparent;
-    final onFill = todayStyle?.onFill;
+    final ring = todayStyle?.fill;
+    const fill = Colors.transparent;
+    const Color? onFill = null;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -635,15 +636,21 @@ class _DayCell extends StatelessWidget {
                               height: 1.1,
                             ),
                           ),
-                          StrokeText(
-                            '${day.day}',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: onFill ?? color,
-                              fontWeight: FontWeight.w500,
-                              fontSize: 16,
-                              height: 1.25,
-                              fontFeatures: const [FontFeature.tabularFigures()],
+                          Container(
+                            width: 30,
+                            height: 28,
+                            alignment: Alignment.center,
+                            decoration: ring == null ? null : BoxDecoration(shape: BoxShape.circle, border: Border.all(color: ring, width: 2)),
+                            child: StrokeText(
+                              '${day.day}',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: color,
+                                fontWeight: FontWeight.w500,
+                                fontSize: 16,
+                                height: 1.25,
+                                fontFeatures: const [FontFeature.tabularFigures()],
+                              ),
                             ),
                           ),
                           if (!expanded)

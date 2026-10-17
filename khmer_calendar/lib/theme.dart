@@ -470,14 +470,14 @@ Color todayOnFill(BuildContext context) {
   return cs.onPrimaryContainer;
 }
 
-/// Today's highlight keeps its own fill colour; the date number keeps its red (public holiday /
-/// Sunday) or blue (other observance) colour instead of switching to the highlight text colour.
+/// Today is drawn as a hollow ring, never a filled shape: `fill` is the ring colour and
+/// `onFill` is the date number colour (red / blue stays on holidays and Sundays).
 ({Color fill, Color onFill}) todayColors(BuildContext context, String tone) {
-  final fill = todayFill(context);
-  if (tone == 'sunday' || tone == 'holiday') {
-    return (fill: fill, onFill: dayToneColor(context, tone));
-  }
-  return (fill: fill, onFill: todayOnFill(context));
+  final cal = Theme.of(context).extension<CalColors>();
+  final cs = Theme.of(context).colorScheme;
+  final ring = cal != null && cal.highlightAlpha > 0 ? cal.highlight : cs.primary;
+  final number = tone == 'sunday' || tone == 'holiday' ? dayToneColor(context, tone) : cs.onSurface;
+  return (fill: ring, onFill: number);
 }
 
 Color dayToneColor(BuildContext context, String tone) {
