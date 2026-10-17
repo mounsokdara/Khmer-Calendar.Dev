@@ -98,7 +98,9 @@ jobs:
       - name: Stage files
         run: |
           mkdir -p release-files
-          cp dist/android/app-release.apk release-files/KhmerCalendar.apk
+          cp dist/android/app-armeabi-v7a-release.apk release-files/KhmerCalendar-armeabi-v7a.apk
+          cp dist/android/app-arm64-v8a-release.apk release-files/KhmerCalendar-arm64-v8a.apk
+          cp dist/android/app-x86_64-release.apk release-files/KhmerCalendar-x86_64.apk
           cp dist/windows/KhmerCalendar-windows.zip release-files/KhmerCalendar-windows.zip
           cp dist/macos/KhmerCalendar.dmg release-files/KhmerCalendar.dmg
           cp dist/linux/KhmerCalendar-linux.tar.gz release-files/KhmerCalendar-linux.tar.gz
@@ -116,7 +118,9 @@ jobs:
           echo "Publishing ${TAG}"
           gh release delete "$TAG" --yes --cleanup-tag || true
           gh release create "$TAG" \
-            release-files/KhmerCalendar.apk \
+            release-files/KhmerCalendar-armeabi-v7a.apk \
+            release-files/KhmerCalendar-arm64-v8a.apk \
+            release-files/KhmerCalendar-x86_64.apk \
             release-files/KhmerCalendar-windows.zip \
             release-files/KhmerCalendar.dmg \
             release-files/KhmerCalendar-linux.tar.gz \

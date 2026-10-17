@@ -94,7 +94,7 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(networkOnly(request));
     return;
   }
-  if (url.pathname.endsWith('/version.json')) {
+  if (url.pathname.endsWith('/version.json') || url.pathname.endsWith('/version.txt')) {
     event.respondWith(networkFirst(request));
     return;
   }

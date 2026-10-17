@@ -58,10 +58,10 @@
       window.__khmerRefresh = {
         deployedVersion: async function () {
           try {
-            var r = await fetch('version.json?cb=' + Date.now(), { cache: 'no-store' });
+            var r = await fetch('version.txt?cb=' + Date.now(), { cache: 'no-store' });
             if (!r.ok) return null;
-            var j = await r.json();
-            return j && j.version ? String(j.version) : null;
+            var m = /^\s*versionName\s*=\s*(\S+)\s*$/m.exec(await r.text());
+            return m ? m[1] : null;
           } catch (_) {
             return null;
           }
@@ -81,7 +81,7 @@
           } catch (_) {}
           try {
             var files = ['./', 'index.html', 'flutter.js', 'flutter_bootstrap.js', 'main.dart.js',
-              'manifest.json', 'version.json', 'offline.js', 'flutter_service_worker.js'];
+              'manifest.json', 'version.txt', 'offline.js', 'flutter_service_worker.js'];
             await Promise.all(files.map(function (f) {
               return fetch(f, { cache: 'reload' }).catch(function () {});
             }));

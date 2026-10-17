@@ -24,6 +24,9 @@ cd "$APP"
 flutter pub get
 flutter build web --release --no-web-resources-cdn --base-href /
 
+# version.txt (repo root) is served by the site so the web app can check for updates.
+cp "$ROOT/version.txt" "$APP/build/web/version.txt"
+
 # Inject the offline precache list into the service worker.
 cd "$ROOT"
 node scripts/offline-worker.mjs "$APP/build/web"

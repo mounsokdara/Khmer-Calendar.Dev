@@ -12,3 +12,6 @@
 
 /version.json
   Cache-Control: no-cache
+
+/version.txt
+  Cache-Control: no-cache
