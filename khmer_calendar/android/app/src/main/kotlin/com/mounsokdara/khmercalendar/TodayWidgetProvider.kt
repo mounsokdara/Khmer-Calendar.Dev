@@ -97,6 +97,7 @@ class TodayWidgetProvider : AppWidgetProvider() {
             val pal = WidgetTheme.load(context)
             val holidayIsPublic = prefs.getString("hkind", "") == "public"
             WidgetTheme.tint(context, views, pal, R.id.widget_bg) { it.surface }
+            WidgetTheme.tint(context, views, pal, R.id.widget_day_ring) { it.primary }
             WidgetTheme.text(context, views, pal, R.id.widget_title) { it.onVariant }
             WidgetTheme.text(context, views, pal, R.id.widget_day) { it.primary }
             WidgetTheme.text(context, views, pal, R.id.widget_weekday) { it.onSurface }
