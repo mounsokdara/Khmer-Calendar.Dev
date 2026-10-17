@@ -1,9 +1,9 @@
 + set -euo pipefail
 + APK=khmer_calendar/build/app/outputs/flutter-apk/app-release.apk
 + test -f khmer_calendar/build/app/outputs/flutter-apk/app-release.apk
-++ tail -1
 ++ ls /usr/local/lib/android/sdk/build-tools/34.0.0/aapt2 /usr/local/lib/android/sdk/build-tools/35.0.0/aapt2 /usr/local/lib/android/sdk/build-tools/35.0.1/aapt2 /usr/local/lib/android/sdk/build-tools/36.0.0/aapt2 /usr/local/lib/android/sdk/build-tools/36.1.0/aapt2 /usr/local/lib/android/sdk/build-tools/37.0.0/aapt2
 ++ sort -V
+++ tail -1
 + AAPT=/usr/local/lib/android/sdk/build-tools/37.0.0/aapt2
 ++ /usr/local/lib/android/sdk/build-tools/37.0.0/aapt2 dump badging khmer_calendar/build/app/outputs/flutter-apk/app-release.apk
 + BADGING='package: name='\''com.mounsokdara.khmercalendar'\'' versionCode='\''50'\'' versionName='\''1.0.4'\'' platformBuildVersionName='\''16'\'' platformBuildVersionCode='\''36'\'' compileSdkVersion='\''36'\'' compileSdkVersionCodename='\''16'\''
