@@ -1,24 +1,106 @@
 {
   "wheel": {
-    "min_gap_ms": 1,
-    "max_live_players": 99,
+    "min_gap_ms": 25,
+    "max_live_players": 1,
     "max_lifetime_ms": 3000,
     "custom_max_bytes": 1048576
   },
   "sounds": [
-    {"id":"none","asset":null,"en":"None","km":"បិទសំឡេង"},
-    {"id":"wheel1","asset":"sounds/wheel1.mp3","en":"Wheel 1","km":"សំឡេងកង់ ១"},
-    {"id":"wheel2","asset":"sounds/wheel2.mp3","en":"Wheel 2","km":"សំឡេងកង់ ២"},
-    {"id":"iphone","asset":"sounds/iphone_wheel.mp3","en":"iPhone","km":"iPhone"},
-    {"id":"book_open","asset":"sounds/book_open.mp3","en":"Book Open","km":"បើកសៀវភៅ"},
-    {"id":"ded","asset":"sounds/ded.mp3","en":"Ded","km":"ដេដ"},
-    {"id":"dew","asset":"sounds/dew.wav","en":"Dew","km":"ដេវ"},
-    {"id":"extended_effect","asset":"sounds/extended_effect.ogg","en":"Extended Effect","km":"ឥទ្ធិពលបន្ថែម"},
-    {"id":"high_pitch","asset":"sounds/high_pitch.mp3","en":"High Pitch","km":"សំឡេងខ្ពស់"},
-    {"id":"idk_what_to_call_ts","asset":"sounds/idk_what_to_call_ts.mp3","en":"IDK What To Call This","km":"មិនដឹងហៅថាអ្វី"},
-    {"id":"plastic_click","asset":"sounds/plastic_click.ogg","en":"Plastic Click","km":"ចុចប្លាស្ទិក"},
-    {"id":"pop","asset":"sounds/pop.mp3","en":"Pop","km":"ប៉ុប"},
-    {"id":"table_knock","asset":"sounds/table_knock.mp3","en":"Table Knock","km":"គោះតុ"},
-    {"id":"custom","asset":null,"en":"Custom","km":"សំឡេងផ្ទាល់ខ្លួន"}
+    {
+      "id": "none",
+      "asset": null,
+      "en": "None",
+      "km": "បិទសំឡេង"
+    },
+    {
+      "id": "wheel1",
+      "asset": "sounds/wheel1.mp3",
+      "start_ms": 25,
+      "en": "Wheel 1",
+      "km": "សំឡេងកង់ ១"
+    },
+    {
+      "id": "wheel2",
+      "asset": "sounds/wheel2.mp3",
+      "start_ms": 24,
+      "en": "Wheel 2",
+      "km": "សំឡេងកង់ ២"
+    },
+    {
+      "id": "iphone",
+      "asset": "sounds/iphone_wheel.mp3",
+      "start_ms": 64,
+      "en": "iPhone",
+      "km": "iPhone"
+    },
+    {
+      "id": "book_open",
+      "asset": "sounds/book_open.mp3",
+      "start_ms": 360,
+      "en": "Book Open",
+      "km": "បើកសៀវភៅ"
+    },
+    {
+      "id": "ded",
+      "asset": "sounds/ded.mp3",
+      "start_ms": 119,
+      "en": "Ded",
+      "km": "ដេដ"
+    },
+    {
+      "id": "dew",
+      "asset": "sounds/dew.wav",
+      "start_ms": 15,
+      "en": "Dew",
+      "km": "ដេវ"
+    },
+    {
+      "id": "extended_effect",
+      "asset": "sounds/extended_effect.ogg",
+      "start_ms": 0,
+      "en": "Extended Effect",
+      "km": "ឥទ្ធិពលបន្ថែម"
+    },
+    {
+      "id": "high_pitch",
+      "asset": "sounds/high_pitch.mp3",
+      "start_ms": 49,
+      "en": "High Pitch",
+      "km": "សំឡេងខ្ពស់"
+    },
+    {
+      "id": "idk_what_to_call_ts",
+      "asset": "sounds/idk_what_to_call_ts.mp3",
+      "start_ms": 219,
+      "en": "IDK What To Call This",
+      "km": "មិនដឹងហៅថាអ្វី"
+    },
+    {
+      "id": "plastic_click",
+      "asset": "sounds/plastic_click.ogg",
+      "start_ms": 132,
+      "en": "Plastic Click",
+      "km": "ចុចប្លាស្ទិក"
+    },
+    {
+      "id": "pop",
+      "asset": "sounds/pop.mp3",
+      "start_ms": 31,
+      "en": "Pop",
+      "km": "ប៉ុប"
+    },
+    {
+      "id": "table_knock",
+      "asset": "sounds/table_knock.mp3",
+      "start_ms": 76,
+      "en": "Table Knock",
+      "km": "គោះតុ"
+    },
+    {
+      "id": "custom",
+      "asset": null,
+      "en": "Custom",
+      "km": "សំឡេងផ្ទាល់ខ្លួន"
+    }
   ]
 }
