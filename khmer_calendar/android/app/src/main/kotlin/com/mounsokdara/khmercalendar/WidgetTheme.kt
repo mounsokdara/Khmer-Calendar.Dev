@@ -65,7 +65,7 @@ object WidgetTheme {
     private fun systemNight(context: Context): Boolean =
         (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
 
-    private fun current(context: Context, pal: Palette): Tones = when (pal.mode) {
+    fun current(context: Context, pal: Palette): Tones = when (pal.mode) {
         "light" -> pal.light
         "dark" -> pal.dark
         else -> if (systemNight(context)) pal.dark else pal.light

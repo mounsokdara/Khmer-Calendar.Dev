@@ -36,11 +36,7 @@
             <TextView android:id="@+id/month_sub" android:layout_width="match_parent" android:layout_height="wrap_content" android:ellipsize="end" android:maxLines="1" android:textSize="12sp" />
         </LinearLayout>
 
-        <TextView android:id="@+id/year_prev" android:layout_width="26dp" android:layout_height="36dp" android:clickable="true" android:focusable="true" android:gravity="center" android:text="«" android:textSize="20sp" />
-        <TextView android:id="@+id/month_prev" android:layout_width="26dp" android:layout_height="36dp" android:clickable="true" android:focusable="true" android:gravity="center" android:text="‹" android:textSize="24sp" />
         <TextView android:id="@+id/month_today" android:layout_width="wrap_content" android:layout_height="36dp" android:clickable="true" android:focusable="true" android:gravity="center" android:paddingHorizontal="4dp" android:text="ថ្ងៃនេះ" android:textSize="12sp" android:textStyle="bold" />
-        <TextView android:id="@+id/month_next" android:layout_width="26dp" android:layout_height="36dp" android:clickable="true" android:focusable="true" android:gravity="center" android:text="›" android:textSize="24sp" />
-        <TextView android:id="@+id/year_next" android:layout_width="26dp" android:layout_height="36dp" android:clickable="true" android:focusable="true" android:gravity="center" android:text="»" android:textSize="20sp" />
     </LinearLayout>
 
     <LinearLayout android:layout_width="match_parent" android:layout_height="24dp" android:orientation="horizontal">

@@ -299,6 +299,15 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/khmer_today_widget_info"/>
         </receiver>
+        <!-- Floating month/year wheel picker opened from the month widget. No intent filter and not exported: it cannot be launched from the launcher or by other apps. -->
+        <activity
+            android:name=".MonthPickActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@style/MonthPickLight" />
+
         <receiver
             android:name=".MonthWidgetProvider"
             android:exported="true"

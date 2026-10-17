@@ -57,6 +57,27 @@ class MonthWidgetProvider : AppWidgetProvider() {
             for (id in ids) mgr.updateAppWidget(id, build(context, id))
         }
 
+        fun shownOf(context: Context, widgetId: Int): Pair<Int, Int> = shown(context, widgetId)
+
+        /** Used by [MonthPickActivity]: jump this widget to [year]/[month] and redraw it. */
+        fun setShown(context: Context, widgetId: Int, year: Int, month: Int) {
+            if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID) return
+            WidgetStore.prefs(context).edit()
+                .putInt("month_y_$widgetId", year)
+                .putInt("month_m_$widgetId", month)
+                .apply()
+            AppWidgetManager.getInstance(context).updateAppWidget(widgetId, build(context, widgetId))
+        }
+
+        private fun pickPi(context: Context, widgetId: Int): PendingIntent {
+            val intent =
+                Intent(context, MonthPickActivity::class.java)
+                    .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            return PendingIntent.getActivity(context, 7 + widgetId * 10, intent, flags)
+        }
+
         private fun shown(context: Context, widgetId: Int): Pair<Int, Int> {
             val p = WidgetStore.prefs(context)
             val now = Calendar.getInstance()
@@ -186,9 +207,7 @@ class MonthWidgetProvider : AppWidgetProvider() {
             val nameMap = names(context)
             val pal = WidgetTheme.load(context)
             WidgetTheme.tint(context, views, pal, R.id.month_bg) { it.surface }
-            for (id in intArrayOf(R.id.year_prev, R.id.year_next, R.id.month_prev, R.id.month_next, R.id.month_today)) {
-                WidgetTheme.text(context, views, pal, id) { it.primary }
-            }
+            WidgetTheme.text(context, views, pal, R.id.month_today) { it.primary }
             WidgetTheme.text(context, views, pal, R.id.month_name) { it.onSurface }
             WidgetTheme.text(context, views, pal, R.id.month_sub) { it.onVariant }
             val monthName = months[(month - 1).coerceIn(0, 11)]
@@ -243,14 +262,12 @@ class MonthWidgetProvider : AppWidgetProvider() {
                     WidgetStore.launch(context, "today", isoOf(d)),
                 )
             }
-            views.setOnClickPendingIntent(R.id.year_prev, shiftPi(context, widgetId, "year", -1, 1))
-            views.setOnClickPendingIntent(R.id.year_next, shiftPi(context, widgetId, "year", 1, 2))
-            views.setOnClickPendingIntent(R.id.month_prev, shiftPi(context, widgetId, "month", -1, 3))
-            views.setOnClickPendingIntent(R.id.month_next, shiftPi(context, widgetId, "month", 1, 4))
             views.setOnClickPendingIntent(R.id.month_today, shiftPi(context, widgetId, "today", 0, 5))
             val openCalendar = WidgetStore.launch(context, "calendar")
             views.setOnClickPendingIntent(R.id.month_root, openCalendar)
-            views.setOnClickPendingIntent(R.id.month_name, openCalendar)
+            val pick = pickPi(context, widgetId)
+            views.setOnClickPendingIntent(R.id.month_name, pick)
+            views.setOnClickPendingIntent(R.id.month_sub, pick)
             return views
         }
     }
