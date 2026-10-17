@@ -70,6 +70,13 @@ open class MainActivity : FlutterActivity() {
                     }
                 }
                 "pinWidget" -> result.success(pinWidget(call.argument<String>("kind")))
+                "setWidgetMonth" -> {
+                    val id = call.argument<Int>("id") ?: AppWidgetManager.INVALID_APPWIDGET_ID
+                    val year = call.argument<Int>("year") ?: 0
+                    val month = call.argument<Int>("month") ?: 0
+                    if (year > 0 && month in 1..12) MonthWidgetProvider.setShown(this, id, year, month)
+                    result.success(true)
+                }
                 "getLaunch" -> result.success(launchMap(intent))
                 else -> result.notImplemented()
             }

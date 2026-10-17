@@ -299,14 +299,20 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/khmer_today_widget_info"/>
         </receiver>
-        <!-- Floating month/year wheel picker opened from the month widget. No intent filter and not exported: it cannot be launched from the launcher or by other apps. -->
+        <!-- Floating month/year scroll picker (Flutter, transparent) opened from the month widget. No intent filter and not exported: it cannot be launched from the launcher or by other apps. -->
         <activity
             android:name=".MonthPickActivity"
             android:exported="false"
             android:excludeFromRecents="true"
-            android:noHistory="true"
             android:taskAffinity=""
-            android:theme="@style/MonthPickLight" />
+            android:theme="@style/FloatingPickTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+            <meta-data
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/FloatingPickTheme" />
+        </activity>
 
         <receiver
             android:name=".MonthWidgetProvider"

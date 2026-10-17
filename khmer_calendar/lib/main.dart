@@ -21,6 +21,7 @@ import 'screens/shell.dart';
 import 'screens/splash.dart';
 import 'screens/today.dart';
 import 'screens/weather_page.dart';
+import 'screens/widget_pick.dart';
 import 'store.dart';
 import 'widgets/stroke_text.dart';
 import 'theme.dart';
@@ -54,13 +55,15 @@ class _KhmerCalendarAppState extends State<KhmerCalendarApp> {
     widget.store.addListener(_onStore);
     StrokeText.enabled = widget.store.textStroke;
     final launchRoute = PlatformDispatcher.instance.defaultRouteName;
-    if (launchRoute.startsWith('/') && launchRoute != '/' && launchRoute != '/splash') {
+    final floatingPick = launchRoute.startsWith('/widget-pick');
+    if (!floatingPick && launchRoute.startsWith('/') && launchRoute != '/' && launchRoute != '/splash') {
       widget.store.pendingRoute = launchRoute;
     }
     router = GoRouter(
       refreshListenable: widget.store.routerTick,
-      initialLocation: '/splash',
+      initialLocation: floatingPick ? launchRoute : '/splash',
       redirect: (ctx, state) {
+        if (state.uri.path == '/widget-pick') return null;
         if (!widget.store.hydrated) return '/splash';
         if (!widget.store.setupDone && state.uri.path != '/get-started') return '/get-started';
         if (widget.store.setupDone) {
@@ -95,6 +98,15 @@ class _KhmerCalendarAppState extends State<KhmerCalendarApp> {
             GoRoute(path: '/weather', builder: (_, _) => WeatherPage(store: widget.store)),
             GoRoute(path: '/more', builder: (_, _) => MorePage(store: widget.store)),
           ],
+        ),
+        GoRoute(
+          path: '/widget-pick',
+          builder: (_, state) => WidgetPickPage(
+            store: widget.store,
+            widgetId: int.tryParse(state.uri.queryParameters['id'] ?? '') ?? 0,
+            year: int.tryParse(state.uri.queryParameters['y'] ?? '') ?? DateTime.now().year,
+            month: int.tryParse(state.uri.queryParameters['m'] ?? '') ?? DateTime.now().month,
+          ),
         ),
         GoRoute(path: '/settings', builder: (_, _) => SettingsPage(store: widget.store)),
         GoRoute(path: '/settings/theme', builder: (_, _) => ThemePage(store: widget.store)),
