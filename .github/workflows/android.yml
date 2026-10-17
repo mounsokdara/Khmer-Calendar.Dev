@@ -1,10 +1,9 @@
-# Android: standalone jobs, one per package (arm32, arm64, x64, x86, arm32_64, x86_x64, universal).
+# Android: standalone jobs, one per package (arm32, arm64, x64, arm32_64, universal).
 # Each job builds, aligns, signs (v1+v2+v3+v4) and verifies its own APK, uploads it as its own artifact and,
 # on pushes, as its own asset of the "dev-latest" pre-release (so nothing has to be unzipped from a bundle).
 # Version code = versionCode from pubspec.yaml * 10 + a digit per package (see build.gradle.kts), never the run number.
-#   x86 and x86_x64: Flutter cannot make RELEASE builds for x86 (only arm, arm64, x64), so these two are DEBUG builds
-#   (JIT, much bigger and slower, marked debuggable) and carry "-debug" in the name. Fine for x86 emulators/tablets.
-#   "armeabi" (ARMv5/v6) cannot be built by Flutter at all.
+#   Not possible with Flutter: x86 (32-bit Intel), x86_x64 (contains x86) and armeabi (ARMv5/v6). Flutter's
+#   --target-platform for Android only accepts android-arm, android-arm64 and android-x64 (in every build mode).
 # Runs on its own (Actions tab > Run workflow) or is called by release.yml.
 name: Android
 
@@ -36,7 +35,7 @@ jobs:
           gh release delete dev-latest --yes --cleanup-tag --repo "$GITHUB_REPOSITORY" || true
           gh release create dev-latest --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" --title "Khmer Calendar DEV (${GITHUB_SHA::7})" \
-            --notes "Dev build from main @ ${GITHUB_SHA::7}. One standalone APK per package: arm64 for almost every phone, arm32 for old 32-bit phones, x64 for emulators, arm32_64 / x86_x64 / universal for several ABIs in one file. The name in the file is the package. Same app id as production; uninstall the production app first if the signing key differs." \
+            --notes "Dev build from main @ ${GITHUB_SHA::7}. One standalone APK per package: arm64 for almost every phone, arm32 for old 32-bit phones, x64 for emulators and Intel Chromebooks, arm32_64 and universal for several ABIs in one file. The name in the file is the package. Same app id as production; uninstall the production app first if the signing key differs." \
             --prerelease
 
   android:
@@ -54,9 +53,7 @@ jobs:
           - { name: arm32,     target: "android-arm",                           mode: release, split: true,  out: app-armeabi-v7a-release.apk, experimental: false }
           - { name: arm64,     target: "android-arm64",                         mode: release, split: true,  out: app-arm64-v8a-release.apk,   experimental: false }
           - { name: x64,       target: "android-x64",                           mode: release, split: true,  out: app-x86_64-release.apk,      experimental: false }
-          - { name: x86-debug,     target: "android-x86",           mode: debug, split: false, out: app-debug.apk, experimental: true }
           - { name: arm32_64,  target: "android-arm,android-arm64",             mode: release, split: false, out: app-release.apk,            experimental: false }
-          - { name: x86_x64-debug, target: "android-x86,android-x64", mode: debug, split: false, out: app-debug.apk, experimental: true }
           - { name: universal, target: "android-arm,android-arm64,android-x64", mode: release, split: false, out: app-release.apk,            experimental: false }
     steps:
       - uses: actions/checkout@v4
