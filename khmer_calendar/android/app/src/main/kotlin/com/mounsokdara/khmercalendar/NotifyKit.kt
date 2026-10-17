@@ -20,7 +20,6 @@ object NotifyKit {
     const val SIL_ID = 1002
     const val PUBLIC_ID = 1003
     const val RELIGIOUS_ID = 1004
-    const val TASK_ID = 1005
     const val DAILY_REQ = 41
     const val SIL_REQ = 42
     const val SIL_ALARM_BASE = 3000
@@ -115,13 +114,6 @@ object NotifyKit {
         val intent = Intent(context, cls)
         val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         return PendingIntent.getBroadcast(context, req, intent, flags)
-    }
-
-    fun morningOf(year: Int, month: Int, day: Int): Long {
-        val c = Calendar.getInstance()
-        c.set(year, month - 1, day, 7, 0, 0)
-        c.set(Calendar.MILLISECOND, 0)
-        return c.timeInMillis
     }
 
     fun nextMorning(): Long {

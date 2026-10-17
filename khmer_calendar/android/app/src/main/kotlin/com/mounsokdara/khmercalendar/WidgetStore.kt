@@ -10,13 +10,7 @@ import java.util.Calendar
 object WidgetStore {
     const val PREFS = "khmer_home_widget"
     const val CHANNEL = "khmer_daily"
-    const val CHANNEL_NAME = "Daily calendar"
-    const val SIL_CHANNEL = "khmer_sil"
-    const val SIL_CHANNEL_NAME = "Silas day"
     const val NOTIFY_ID = 1001
-    const val SIL_NOTIFY_ID = 1002
-    const val ALARM_REQ = 41
-    const val SIL_ALARM_REQ = 42
 
     val WEEKDAYS_KM = arrayOf("អាទិត្យ", "ចន្ទ", "អង្គារ", "ពុធ", "ព្រហស្បតិ៍", "សុក្រ", "សៅរ៍")
     val WEEKDAYS_EN = arrayOf("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")
@@ -41,11 +35,6 @@ object WidgetStore {
     fun weekStartsOn(context: Context) = prefs(context).getInt("weekStartsOn", 1)
 
     fun title(context: Context) = prefs(context).getString("title", "ប្រតិទិនខ្មែរ") ?: "ប្រតិទិនខ្មែរ"
-
-    fun weekdayToday(context: Context): String {
-        val w = Calendar.getInstance().get(Calendar.DAY_OF_WEEK) - 1
-        return if (lang(context) == "en") WEEKDAYS_EN[w] else WEEKDAYS_KM[w]
-    }
 
     fun dayPayload(context: Context, iso: String): JSONObject? {
         val raw = prefs(context).getString("days", null) ?: return null
@@ -74,8 +63,6 @@ object WidgetStore {
             }
         return PendingIntent.getActivity(context, req, intent, flags)
     }
-
-    fun notificationsOn(context: Context) = masterNotifyOn(context)
 
     fun osNotificationsOn(context: Context): Boolean {
         if (Build.VERSION.SDK_INT >= 33) {

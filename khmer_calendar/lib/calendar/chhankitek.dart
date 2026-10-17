@@ -349,9 +349,6 @@ String _yearTypeCompute(int e) {
   return 'normal';
 }
 
-int debugYearType(int e) => _cw(e);
-String debugYearTypeName(int e) => _yearType(e);
-
 int _yearLength(int e) {
   final t = _yearType(e);
   if (t == 'leap-month') return _leapMonthYear;
