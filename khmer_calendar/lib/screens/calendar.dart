@@ -450,7 +450,7 @@ class _CalendarPageState extends State<CalendarPage> {
                 count: holidays.length,
                 onTap: () {
                   store.setLastTab(TabId.events);
-                  store.setLastEventsPane('holidays');
+                  store.setLastEventsPane('all');
                   context.go('/events');
                 },
               ),
@@ -479,7 +479,7 @@ class _CalendarPageState extends State<CalendarPage> {
                 count: tasks.length,
                 onTap: () {
                   store.setLastTab(TabId.events);
-                  store.setLastEventsPane('tasks');
+                  store.setLastEventsPane('task');
                   context.go('/events');
                 },
               ),

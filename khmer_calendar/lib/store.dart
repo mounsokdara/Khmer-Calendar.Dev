@@ -108,7 +108,7 @@ class AppStore extends ChangeNotifier {
   Lang lang = deviceLang();
   bool setupDone = false;
   TabId lastTab = TabId.calendar;
-  String lastEventsPane = 'holidays';
+  String lastEventsPane = 'all';
   String calView = 'month';
   List<String> weatherCities = [];
   bool installed = false;
@@ -171,7 +171,7 @@ class AppStore extends ChangeNotifier {
         if (tab != null) {
           lastTab = TabId.values.firstWhere((t) => t.name == tab, orElse: () => TabId.calendar);
         }
-        lastEventsPane = p['lastEventsPane'] as String? ?? 'holidays';
+        lastEventsPane = p['lastEventsPane'] as String? ?? 'all';
         final view = p['calView'] as String?;
         calView = calViewIds.contains(view) ? view! : 'month';
         weatherCities = ((p['weatherCities'] as List?) ?? []).cast<String>();
@@ -553,7 +553,7 @@ class AppStore extends ChangeNotifier {
     accentColor = '#F5C400';
     highlightColor = '#FF3B30';
     highlightAlpha = 0.22;
-    lastEventsPane = 'holidays';
+    lastEventsPane = 'all';
     calView = 'month';
     weatherCities = [];
     installed = false;

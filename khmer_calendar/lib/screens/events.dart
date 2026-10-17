@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../calendar/chhankitek.dart';
 import '../calendar/observances.dart';
 import '../dates.dart';
 import '../i18n.dart';
@@ -9,6 +10,7 @@ import '../widgets/holiday_info.dart';
 import '../widgets/obs_row.dart';
 import '../widgets/overlay_page.dart';
 import '../widgets/segmented_list.dart';
+import '../widgets/sil_mark.dart';
 import '../widgets/swipe_delete.dart';
 import '../widgets/task_sheet.dart';
 import '../widgets/wheel_picker.dart';
@@ -26,19 +28,90 @@ class EventsPage extends StatelessWidget {
   }
 }
 
+class _EventFilter {
+  const _EventFilter(this.id, this.labelKey, this.icon);
+  final String id;
+  final String labelKey;
+  final IconData? icon;
+}
+
+const _eventFilters = [
+  _EventFilter('all', 'filterAll', Icons.apps_rounded),
+  _EventFilter('holiday', 'filterHoliday', Icons.flag_rounded),
+  _EventFilter('other', 'filterOtherHoliday', Icons.celebration_rounded),
+  _EventFilter('task', 'filterTask', Icons.task_alt_rounded),
+  _EventFilter('sil', 'silDay', null),
+];
+
+String _filterOf(String stored) {
+  if (stored == 'tasks') return 'task';
+  if (stored == 'holidays') return 'all';
+  return _eventFilters.any((f) => f.id == stored) ? stored : 'all';
+}
+
 class _EventsBody extends StatelessWidget {
   const _EventsBody({required this.store});
   final AppStore store;
+
+  List<Observance> _filtered(String filter, int year) {
+    return yearObservances(year, store.events).where((o) {
+      switch (filter) {
+        case 'holiday':
+          return o.kind == Kind.holiday && o.holidayType == HolidayType.public;
+        case 'other':
+          return o.kind == Kind.holiday && o.holidayType != HolidayType.public;
+        case 'sil':
+          return o.kind == Kind.sil;
+        default:
+          return true;
+      }
+    }).toList();
+  }
+
+  void _openObs(BuildContext context, Observance item) {
+    store.goToDate(item.date);
+    if (item.kind == Kind.event && item.eventId != null) {
+      final ev = store.events.where((e) => e.id == item.eventId).firstOrNull;
+      if (ev != null) showTaskSheet(context, store: store, editing: ev);
+      return;
+    }
+    showHolidayInfo(context, store, item);
+  }
+
+  Widget _filterBar(BuildContext context, String filter) {
+    final lang = store.lang;
+    return SizedBox(
+      height: 44,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: _eventFilters.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (_, i) {
+          final f = _eventFilters[i];
+          return ChoiceChip(
+            showCheckmark: false,
+            avatar: f.icon == null ? const SilMark(size: 18) : Icon(f.icon, size: 18),
+            label: Text(t(lang, f.labelKey)),
+            selected: filter == f.id,
+            onSelected: (_) => store.setLastEventsPane(f.id),
+          );
+        },
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final lang = store.lang;
     final year = fromIso(store.cursor).year;
-    final pane = store.lastEventsPane;
-    final hols = yearObservances(year, []).where((e) => e.kind == Kind.holiday).toList();
+    final filter = _filterOf(store.lastEventsPane);
+    final isTask = filter == 'task';
     final groups = <String, List<Observance>>{};
-    for (final h in hols) {
-      groups.putIfAbsent(h.date.substring(0, 7), () => []).add(h);
+    if (!isTask) {
+      for (final h in _filtered(filter, year)) {
+        groups.putIfAbsent(h.date.substring(0, 7), () => []).add(h);
+      }
     }
     final today = todayIso();
     final current = store.events.where((e) => e.done != true && (e.date.isEmpty || e.date.compareTo(today) >= 0)).toList();
@@ -47,63 +120,40 @@ class _EventsBody extends StatelessWidget {
     final wide = MediaQuery.sizeOf(context).width >= mediumBreak;
     final xl = MediaQuery.sizeOf(context).width >= xlBreak;
 
-    final segmented = SegmentedButton<String>(
-      segments: [
-        ButtonSegment(value: 'holidays', label: Text(t(lang, 'holidaysTab'))),
-        ButtonSegment(value: 'tasks', label: Text(t(lang, 'tasksTab'))),
-      ],
-      selected: {pane},
-      onSelectionChanged: (s) => store.setLastEventsPane(s.first),
-    );
-
-    final yearOrAdd = pane == 'holidays'
-        ? TextButton.icon(
-            onPressed: () async {
-              final pick = await showYearWheel(context, lang: lang, year: year);
-              if (pick != null) {
-                final cur = fromIso(store.cursor);
-                store.setCursor(isoOf(DateTime(pick, cur.month, 1)));
-              }
-            },
-            icon: const Icon(Icons.expand_more),
-            label: Text('$year'),
-          )
-        : IconButton(
-            tooltip: t(lang, 'addTask'),
-            onPressed: () => showTaskSheet(context, store: store),
-            icon: const Icon(Icons.add),
-          );
-
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
-          child: wide
-              ? Row(
-                  children: [
-                    Text(t(lang, 'events'), style: Theme.of(context).textTheme.headlineSmall),
-                    Expanded(child: Center(child: segmented)),
-                    yearOrAdd,
-                  ],
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(child: Text(t(lang, 'events'), style: Theme.of(context).textTheme.headlineSmall)),
-                        yearOrAdd,
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Center(child: segmented),
-                  ],
+          padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
+          child: Row(
+            children: [
+              Expanded(child: Text(t(lang, 'events'), style: Theme.of(context).textTheme.headlineSmall)),
+              if (!isTask)
+                TextButton.icon(
+                  onPressed: () async {
+                    final pick = await showYearWheel(context, lang: lang, year: year);
+                    if (pick != null) {
+                      final cur = fromIso(store.cursor);
+                      store.setCursor(isoOf(DateTime(pick, cur.month, 1)));
+                    }
+                  },
+                  icon: const Icon(Icons.expand_more),
+                  label: Text('$year'),
                 ),
+              if (isTask || filter == 'all')
+                IconButton(
+                  tooltip: t(lang, 'addTask'),
+                  onPressed: () => showTaskSheet(context, store: store),
+                  icon: const Icon(Icons.add),
+                ),
+            ],
+          ),
         ),
+        _filterBar(context, filter),
+        const SizedBox(height: 4),
         Expanded(
-          child: pane == 'holidays'
+          child: !isTask
               ? (groups.isEmpty
-                  ? Center(child: Text(t(lang, 'noHolidaysYear')))
+                  ? Center(child: Text(t(lang, 'noItemsYear')))
                   : ListView(
                       padding: const EdgeInsets.only(bottom: 16),
                       children: [
@@ -177,10 +227,7 @@ class _EventsBody extends StatelessWidget {
             lang: lang,
             showWeekday: true,
             padDay: true,
-            onTap: () {
-              store.goToDate(item.date);
-              showHolidayInfo(context, store, item);
-            },
+            onTap: () => _openObs(context, item),
           ),
       ],
     );
