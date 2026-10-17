@@ -1,23 +1,26 @@
-Khmer Calendar app v1.0.3:
-- Fixed Lag issues:
+## Changes log:
+**Khmer Calendar V1.0.4:**
 
-    *⚠️ While running http get, the app just keep freezing*
-    
-    *⚠️ Changing settings also keep freezing*
-    
-    *⚠️ Adding the reminder also keep freezing*
-    
-    *⚠️ Anything that save data to the device will always having freeze issues*
+## Added:
+- Activity XML
+- Text stroke on months grids
+- Full calendar details for widget
+- A ring overlay to mark today (the current day) in months
+- More filters for the Events tab
 
-  ***? Why it's freeze?***
+## Bug fixes:
+- The highlight overwrote the event color of the calendar grid text
+- The navigation bar always stayed black
+- Vibration is now included only on mobile devices; other devices (Windows, macOS, Linux, etc.) no longer load it
+- Widget did not load calendar events on older dates properly
+- Snackbar stayed behind the navigation bar (z-index) when going to different pages, so you couldn't read it
 
-  **✓ When the data get overwriting or being saved, the app try to recalculate the dates value costing your cpu overload**
-- Added View grids button instead of expand button:
-    We have years, full screen months view, months view, weeks view.
-Pinch to (zoom in/out) to change view type without need to click a button.
-    A vertical scrolling years grids. click on exact months to travel to that months like iphone
-- Bypassed Computer Date limit
-- Fixed stackbar padding & zindex to stay behind navagtion bar
-- A lightweight Apk files
-- Fixed Windows app cant be open due to missing dll
-- Windows app now has the Khmer Calendar icon
+## Improvements:
+- Widget style
+- About page layout
+- Months widget: instead of the boring arrow buttons, we now use a scroll picker for a better user experience
+- Instead of re-inserting the scroll picker sounds every time, we replay them to reduce lag
+- Scroll picker is now more curved
+- Sparkle ripple is now applied to every build
+- Events tab has no scrolling limit at certain years anymore
+- Cut the empty noise at the start of the audio, leaving only the clip that has sound
