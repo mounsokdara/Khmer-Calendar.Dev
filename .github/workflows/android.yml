@@ -2,7 +2,8 @@
 # Each job builds, aligns, signs (v1+v2+v3+v4) and verifies its own APK, uploads it as its own artifact and,
 # on pushes, as its own asset of the "dev-latest" pre-release (so nothing has to be unzipped from a bundle).
 # Version code = versionCode from pubspec.yaml * 10 + a digit per package (see build.gradle.kts), never the run number.
-#   x86 and x86_x64 are best-effort: Flutter release builds only support arm, arm64 and x64, so these two legs may fail.
+#   x86 and x86_x64: Flutter cannot make RELEASE builds for x86 (only arm, arm64, x64), so these two are DEBUG builds
+#   (JIT, much bigger and slower, marked debuggable) and carry "-debug" in the name. Fine for x86 emulators/tablets.
 #   "armeabi" (ARMv5/v6) cannot be built by Flutter at all.
 # Runs on its own (Actions tab > Run workflow) or is called by release.yml.
 name: Android
@@ -50,13 +51,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { name: arm32,     target: "android-arm",                           split: true,  out: app-armeabi-v7a-release.apk, experimental: false }
-          - { name: arm64,     target: "android-arm64",                         split: true,  out: app-arm64-v8a-release.apk,   experimental: false }
-          - { name: x64,       target: "android-x64",                           split: true,  out: app-x86_64-release.apk,      experimental: false }
-          - { name: x86,       target: "android-x86",                           split: true,  out: app-x86-release.apk,         experimental: true }
-          - { name: arm32_64,  target: "android-arm,android-arm64",             split: false, out: app-release.apk,            experimental: false }
-          - { name: x86_x64,   target: "android-x86,android-x64",               split: false, out: app-release.apk,            experimental: true }
-          - { name: universal, target: "android-arm,android-arm64,android-x64", split: false, out: app-release.apk,            experimental: false }
+          - { name: arm32,     target: "android-arm",                           mode: release, split: true,  out: app-armeabi-v7a-release.apk, experimental: false }
+          - { name: arm64,     target: "android-arm64",                         mode: release, split: true,  out: app-arm64-v8a-release.apk,   experimental: false }
+          - { name: x64,       target: "android-x64",                           mode: release, split: true,  out: app-x86_64-release.apk,      experimental: false }
+          - { name: x86-debug,     target: "android-x86",           mode: debug, split: false, out: app-debug.apk, experimental: true }
+          - { name: arm32_64,  target: "android-arm,android-arm64",             mode: release, split: false, out: app-release.apk,            experimental: false }
+          - { name: x86_x64-debug, target: "android-x86,android-x64", mode: debug, split: false, out: app-debug.apk, experimental: true }
+          - { name: universal, target: "android-arm,android-arm64,android-x64", mode: release, split: false, out: app-release.apk,            experimental: false }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -78,7 +79,7 @@ jobs:
         working-directory: khmer_calendar
       # --split-debug-info strips debug symbols from libapp.so; symbols are kept as an artifact.
       # No --build-number: the version code is the one in pubspec.yaml.
-      - run: flutter build apk --release ${{ matrix.split && '--split-per-abi' || '' }} --target-platform ${{ matrix.target }} --split-debug-info=build/symbols
+      - run: flutter build apk --${{ matrix.mode }} ${{ matrix.split && '--split-per-abi' || '' }} --target-platform ${{ matrix.target }} ${{ matrix.mode == 'release' && '--split-debug-info=build/symbols' || '' }}
         working-directory: khmer_calendar
         env:
           ANDROID_KEYSTORE: ${{ runner.temp }}/khmer-release.keystore
@@ -102,6 +103,7 @@ jobs:
           name: android-${{ matrix.name }}
           path: khmer_calendar/build/app/outputs/flutter-apk/KhmerCalendar-${{ matrix.name }}.apk
       - uses: actions/upload-artifact@v4
+        if: matrix.mode == 'release'
         with:
           name: android-symbols-${{ matrix.name }}
           path: khmer_calendar/build/symbols
