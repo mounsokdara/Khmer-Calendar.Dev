@@ -59,7 +59,12 @@ jobs:
           mkdir app && tar -C app -xf macos-app.tar
           APP=$(find app -maxdepth 1 -name "*.app" | head -1)
           if [ "${{ matrix.arch }}" != "universal" ]; then bash scripts/thin-macos.sh "$APP" "${{ matrix.arch }}"; fi
-          bash scripts/sign-macos.sh "$APP"
+          if [ -n "$PFX_B64" ]; then
+            bash scripts/sign-macos.sh "$APP"
+          else
+            echo "::notice title=Unsigned build::DESKTOP_SIGN_* secrets are not set in this repository: ad-hoc signed only"
+            codesign --force --deep --sign - "$APP"
+          fi
           hdiutil create -volname "Khmer Calendar" -srcfolder "$APP" -ov -format UDZO "KhmerCalendar-macos-${{ matrix.arch }}.dmg"
           ls -lh "KhmerCalendar-macos-${{ matrix.arch }}.dmg"
       - uses: actions/upload-artifact@v4
