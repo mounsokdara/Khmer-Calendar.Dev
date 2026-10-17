@@ -77,6 +77,12 @@ open class MainActivity : FlutterActivity() {
                     if (year > 0 && month in 1..12) MonthWidgetProvider.setShown(this, id, year, month)
                     result.success(true)
                 }
+                "getWidgetYears" -> {
+                    val mgr = AppWidgetManager.getInstance(this)
+                    val ids = mgr.getAppWidgetIds(ComponentName(this, MonthWidgetProvider::class.java))
+                    val years = ids.map { MonthWidgetProvider.shownOf(this, it).first }.distinct().sorted()
+                    result.success(years)
+                }
                 "getLaunch" -> result.success(launchMap(intent))
                 else -> result.notImplemented()
             }
