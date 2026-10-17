@@ -52,6 +52,7 @@ class _KhmerCalendarAppState extends State<KhmerCalendarApp> {
   void initState() {
     super.initState();
     widget.store.addListener(_onStore);
+    StrokeText.enabled = widget.store.textStroke;
     final launchRoute = PlatformDispatcher.instance.defaultRouteName;
     if (launchRoute.startsWith('/') && launchRoute != '/' && launchRoute != '/splash') {
       widget.store.pendingRoute = launchRoute;
@@ -126,6 +127,7 @@ class _KhmerCalendarAppState extends State<KhmerCalendarApp> {
 
   void _onStore() {
     final s = widget.store;
+    StrokeText.enabled = s.textStroke;
     final sig =
         '${s.theme}|${s.colorScheme}|${s.materialYou}|${s.dynamicColor}|${s.extraDark}|${s.accentColor}|${s.highlightColor}|${s.highlightAlpha}|${s.lang}|${s.hydrated}|${s.setupDone}';
     if (sig == _visualSig) return;
@@ -197,7 +199,6 @@ class _KhmerCalendarAppState extends State<KhmerCalendarApp> {
           themeMode: s.theme == 'light' ? ThemeMode.light : s.theme == 'dark' ? ThemeMode.dark : ThemeMode.system,
           routerConfig: router,
           builder: (context, child) {
-            StrokeText.enabled = widget.store.textStroke;
             return AnnotatedRegion<SystemUiOverlayStyle>(
             value: systemBarStyle(Theme.of(context), Theme.of(context).colorScheme.surface),
             child: child ?? const SizedBox.shrink(),

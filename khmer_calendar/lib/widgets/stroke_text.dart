@@ -12,8 +12,11 @@ class StrokeText extends StatelessWidget {
     this.overflow,
   });
 
-  /// Switched from the app root whenever the setting changes.
-  static bool enabled = true;
+  /// Switched from the app root whenever the setting changes; every [StrokeText] listens, so the
+  /// change shows immediately without reopening the app.
+  static final ValueNotifier<bool> enabledNotifier = ValueNotifier<bool>(true);
+  static bool get enabled => enabledNotifier.value;
+  static set enabled(bool v) => enabledNotifier.value = v;
 
   final String data;
   final TextStyle style;
@@ -23,6 +26,13 @@ class StrokeText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: enabledNotifier,
+      builder: (context, on, _) => _build(context, on),
+    );
+  }
+
+  Widget _build(BuildContext context, bool enabled) {
     final fill = Text(data, style: style, textAlign: textAlign, maxLines: maxLines, overflow: overflow);
     if (!enabled) return fill;
     final base = style.color ?? Theme.of(context).colorScheme.onSurface;
