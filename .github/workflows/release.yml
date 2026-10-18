@@ -31,19 +31,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
-        if: matrix.arch == 'x64'
         with:
           flutter-version: "3.47.4"
           channel: stable
           cache: true
-      # No Linux arm64 SDK archive is published, so the arm64 leg installs Flutter from git
-      # (the tool downloads the native arm64 Dart SDK itself).
-      - name: Flutter SDK 3.47.4 from git (arm64)
-        if: matrix.arch == 'arm64'
-        run: |
-          git clone --depth 1 --branch 3.47.4 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
-          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
-          "$RUNNER_TEMP/flutter/bin/flutter" --version
       - name: Linux toolchain
         run: |
           sudo apt-get update

@@ -17,8 +17,6 @@ jobs:
     runs-on: ${{ matrix.runner }}
     continue-on-error: ${{ matrix.experimental }}
     timeout-minutes: 45
-    env:
-      HAVE_SIGN: ${{ secrets.DESKTOP_SIGN_PFX_BASE64 != '' }}
     strategy:
       fail-fast: false
       matrix:
@@ -28,38 +26,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
-        if: matrix.arch == 'x64'
         with:
           flutter-version: "3.47.4"
           channel: stable
           cache: true
-      # Flutter builds for the architecture of the machine its own SDK runs on (there is no --target-platform for
-      # Windows), so the arm64 leg needs a native arm64 SDK. No arm64 archive is published, so use git (the tool
-      # downloads the native arm64 Dart SDK itself).
-      - name: Flutter SDK 3.47.4 from git (arm64)
-        if: matrix.arch == 'arm64'
-        shell: pwsh
-        run: |
-          git clone --depth 1 --branch 3.47.4 https://github.com/flutter/flutter.git "$env:RUNNER_TEMP\flutter"
-          "$env:RUNNER_TEMP\flutter\bin" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
-          & "$env:RUNNER_TEMP\flutter\bin\flutter.bat" --version
+          # The Windows Flutter SDK is x64 only (it runs emulated on the arm64 runner); the app itself is built natively for matrix.arch.
+          architecture: x64
       - run: flutter pub get
         working-directory: khmer_calendar
-      - run: flutter build windows --release
+      - run: flutter build windows --release ${{ matrix.arch == 'arm64' && '--target-platform windows-arm64' || '' }}
         working-directory: khmer_calendar
         env:
           CXXFLAGS: /D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS
       - name: Sign windows (Authenticode)
-        if: env.HAVE_SIGN == 'true'
         shell: pwsh
         env:
           PFX_B64: ${{ secrets.DESKTOP_SIGN_PFX_BASE64 }}
           PFX_PASS: ${{ secrets.DESKTOP_SIGN_PASSWORD }}
         run: ./scripts/sign-windows.ps1 -Dir khmer_calendar\build\windows\${{ matrix.arch }}\runner\Release
-      - name: Signing skipped (no DESKTOP_SIGN_* secrets in this repo)
-        if: env.HAVE_SIGN != 'true'
-        shell: pwsh
-        run: Write-Host "::notice title=Unsigned build::DESKTOP_SIGN_PFX_BASE64 / DESKTOP_SIGN_PASSWORD are not set in this repository, so the Windows files are not Authenticode-signed."
       # After signing on purpose: these are Microsoft-signed and must stay that way.
       - name: Bundle Visual C++ runtime (so it runs without the redistributable installed)
         shell: pwsh
