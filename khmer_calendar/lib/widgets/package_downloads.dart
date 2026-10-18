@@ -29,7 +29,9 @@ const packs = <Pack>[
   Pack('android', 'KhmerCalendar-x64.apk', 'x64', 'x64', 'កម្មវិធីក្លែងធ្វើ និង Chromebook Intel', 'Emulators and Intel Chromebooks'),
   Pack('android', 'KhmerCalendar-arm32_64.apk', 'arm32 + arm64', 'arm32 + arm64', 'ទាំងពីរក្នុងឯកសារតែមួយ', 'Both in one file'),
   Pack('android', 'KhmerCalendar-universal.apk', 'សកល (universal)', 'Universal', 'arm, arm64 និង x64 ក្នុងឯកសារតែមួយ (ធំជាងគេ)', 'arm, arm64 and x64 in one file (largest)'),
-  Pack('windows', 'KhmerCalendar-windows-setup.exe', 'កម្មវិធីដំឡើង (x64)', 'Setup wizard (x64)', 'ដំឡើងសម្រាប់អ្នកប្រើនេះ មានផ្លូវកាត់ក្នុង Start menu', 'Installs for you only, adds a Start menu shortcut'),
+  Pack('windows', 'KhmerCalendar-windows-x64-setup.exe', 'កម្មវិធីដំឡើង x64', 'Setup wizard x64', 'កុំព្យូទ័រ Intel និង AMD៖ ដំឡើងសម្រាប់អ្នកប្រើនេះ មានផ្លូវកាត់ក្នុង Start menu', 'Intel and AMD PCs: installs for you only, adds a Start menu shortcut'),
+  Pack('windows', 'KhmerCalendar-windows-arm64-setup.exe', 'កម្មវិធីដំឡើង arm64', 'Setup wizard arm64', 'កុំព្យូទ័រ ARM៖ ដំឡើងកំណែដើម (native)', 'ARM PCs: installs the native build'),
+  Pack('windows', 'KhmerCalendar-windows-universal-setup.exe', 'កម្មវិធីដំឡើង សកល', 'Setup wizard universal', 'x64 និង arm64 ក្នុងមួយ៖ ដំឡើងកំណែដែលត្រូវនឹងកុំព្យូទ័រ', 'x64 and arm64 in one: installs the build that fits your PC'),
   Pack('windows', 'KhmerCalendar-windows-x64.zip', 'ប្រើដោយមិនដំឡើង x64', 'Portable x64', 'កុំព្យូទ័រ Intel និង AMD៖ ពន្លាហើយប្រើ', 'Intel and AMD PCs: unzip and run'),
   Pack('windows', 'KhmerCalendar-windows-arm64.zip', 'ប្រើដោយមិនដំឡើង arm64', 'Portable arm64', 'កុំព្យូទ័រ ARM៖ ពន្លាហើយប្រើ', 'ARM PCs: unzip and run'),
   Pack('windows', 'KhmerCalendar-windows-universal.zip', 'ប្រើដោយមិនដំឡើង សកល', 'Portable universal', 'x64 និង arm64 ក្នុង zip តែមួយ (ចុច KhmerCalendar.cmd)', 'x64 and arm64 in one zip (run KhmerCalendar.cmd)'),
@@ -58,7 +60,7 @@ Pack? recommendedPack() {
   final arch = kIsWeb ? null : deviceArch();
   final String? file = switch (defaultTargetPlatform) {
     TargetPlatform.android => 'KhmerCalendar-${arch ?? 'universal'}.apk',
-    TargetPlatform.windows => arch == 'arm64' ? 'KhmerCalendar-windows-arm64.zip' : 'KhmerCalendar-windows-setup.exe',
+    TargetPlatform.windows => 'KhmerCalendar-windows-${arch == 'arm64' ? 'arm64' : 'x64'}-setup.exe',
     TargetPlatform.macOS => 'KhmerCalendar-macos-${arch == null ? 'universal' : (arch == 'x64' ? 'x86_64' : 'arm64')}.dmg',
     TargetPlatform.linux => 'KhmerCalendar-linux-${arch == 'arm64' ? 'arm64' : 'x64'}.tar.gz',
     _ => null,
