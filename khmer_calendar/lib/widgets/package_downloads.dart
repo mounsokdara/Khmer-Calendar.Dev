@@ -32,11 +32,13 @@ const packs = <Pack>[
   Pack('windows', 'KhmerCalendar-windows-setup.exe', 'កម្មវិធីដំឡើង (x64)', 'Setup wizard (x64)', 'ដំឡើងសម្រាប់អ្នកប្រើនេះ មានផ្លូវកាត់ក្នុង Start menu', 'Installs for you only, adds a Start menu shortcut'),
   Pack('windows', 'KhmerCalendar-windows-x64.zip', 'ប្រើដោយមិនដំឡើង x64', 'Portable x64', 'កុំព្យូទ័រ Intel និង AMD៖ ពន្លាហើយប្រើ', 'Intel and AMD PCs: unzip and run'),
   Pack('windows', 'KhmerCalendar-windows-arm64.zip', 'ប្រើដោយមិនដំឡើង arm64', 'Portable arm64', 'កុំព្យូទ័រ ARM៖ ពន្លាហើយប្រើ', 'ARM PCs: unzip and run'),
+  Pack('windows', 'KhmerCalendar-windows-universal.zip', 'ប្រើដោយមិនដំឡើង សកល', 'Portable universal', 'x64 និង arm64 ក្នុង zip តែមួយ (ចុច KhmerCalendar.cmd)', 'x64 and arm64 in one zip (run KhmerCalendar.cmd)'),
   Pack('macos', 'KhmerCalendar-macos-arm64.dmg', 'Apple Silicon', 'Apple Silicon', 'Mac M1 ឡើងទៅ', 'Macs with M1 or newer'),
   Pack('macos', 'KhmerCalendar-macos-x86_64.dmg', 'Intel', 'Intel', 'Mac ប្រើ Intel', 'Intel Macs'),
   Pack('macos', 'KhmerCalendar-macos-universal.dmg', 'សកល (universal)', 'Universal', 'ទាំងពីរក្នុងឯកសារតែមួយ (ធំជាងគេ)', 'Both in one file (largest)'),
   Pack('linux', 'KhmerCalendar-linux-x64.tar.gz', 'x64', 'x64', 'Intel និង AMD', 'Intel and AMD'),
   Pack('linux', 'KhmerCalendar-linux-arm64.tar.gz', 'arm64', 'arm64', 'ARM ៦៤ប៊ីត (Raspberry Pi, ម៉ាស៊ីនមេ ARM)', 'ARM 64-bit (Raspberry Pi, ARM servers)'),
+  Pack('linux', 'KhmerCalendar-linux-universal.tar.gz', 'សកល (universal)', 'Universal', 'x64 និង arm64 ក្នុងឯកសារតែមួយ (ដំណើរការ khmer-calendar.sh)', 'x64 and arm64 in one file (run khmer-calendar.sh)'),
   Pack('project', 'KhmerCalendar-project.zip', 'កូដប្រភព', 'Source code', 'គម្រោងទាំងមូលជា zip', 'The whole project as a zip'),
 ];
 

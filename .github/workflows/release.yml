@@ -109,6 +109,45 @@ jobs:
           mkdir -p release-files
           # Every package job uploads its own file named KhmerCalendar-<os/arch>.<ext>; publish them as separate assets.
           find dist -type f -name 'KhmerCalendar-*' ! -name '*.idsig' -exec cp -t release-files {} +
+          # Universal packages: x64 + arm64 in one file, with a launcher that starts the build matching the CPU.
+          # (Windows and Linux have no fat binaries like macOS, so the two builds sit side by side.)
+          if [ -f dist/windows-x64/KhmerCalendar-windows-x64.zip ] && [ -f dist/windows-arm64/KhmerCalendar-windows-arm64.zip ]; then
+            mkdir -p u-win/x64 u-win/arm64
+            unzip -q dist/windows-x64/KhmerCalendar-windows-x64.zip -d u-win/x64
+            unzip -q dist/windows-arm64/KhmerCalendar-windows-arm64.zip -d u-win/arm64
+            cat > u-win/KhmerCalendar.cmd <<'LAUNCHER'
+          @echo off
+          setlocal
+          set "ARCH=%PROCESSOR_ARCHITECTURE%"
+          if /I "%PROCESSOR_ARCHITEW6432%"=="ARM64" set "ARCH=ARM64"
+          if /I "%ARCH%"=="ARM64" (set "DIR=arm64") else (set "DIR=x64")
+          start "" "%~dp0%DIR%\khmer_calendar.exe"
+          LAUNCHER
+            sed -i 's/$/\r/' u-win/KhmerCalendar.cmd
+            (cd u-win && zip -qr ../release-files/KhmerCalendar-windows-universal.zip .)
+          else
+            echo "::warning::windows universal skipped (needs both the x64 and arm64 zips)"
+          fi
+          if [ -f dist/linux-x64/KhmerCalendar-linux-x64.tar.gz ] && [ -f dist/linux-arm64/KhmerCalendar-linux-arm64.tar.gz ]; then
+            mkdir -p u-linux/x64 u-linux/arm64
+            tar -xzf dist/linux-x64/KhmerCalendar-linux-x64.tar.gz -C u-linux/x64
+            tar -xzf dist/linux-arm64/KhmerCalendar-linux-arm64.tar.gz -C u-linux/arm64
+            cat > u-linux/khmer-calendar.sh <<'LAUNCHER'
+          #!/bin/sh
+          # Starts the build that matches this CPU (x64 or arm64).
+          here="$(cd "$(dirname "$0")" && pwd)"
+          case "$(uname -m)" in
+            aarch64|arm64) dir=arm64 ;;
+            x86_64|amd64) dir=x64 ;;
+            *) echo "Unsupported CPU: $(uname -m)" >&2; exit 1 ;;
+          esac
+          exec "$here/$dir/khmer_calendar" "$@"
+          LAUNCHER
+            chmod +x u-linux/khmer-calendar.sh
+            tar -C u-linux -czf release-files/KhmerCalendar-linux-universal.tar.gz .
+          else
+            echo "::warning::linux universal skipped (needs both the x64 and arm64 archives)"
+          fi
           ls -lh release-files
       - name: Publish GitHub Release
         env:
