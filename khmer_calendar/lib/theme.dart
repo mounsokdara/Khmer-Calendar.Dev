@@ -425,7 +425,7 @@ const mediumBreak = 720.0;
 const xlBreak = 1180.0;
 
 // Keep in sync with `version:` in pubspec.yaml (test/version_sync_test.dart enforces it).
-const appVersion = '1.0.5';
+const appVersion = '1.0.4';
 const appBuildNumber = 5;
 const appAuthor = 'Moun Sokdara';
 const appSourceUrl = 'https://github.com/mounsokdara/Khmer-Calendar';
