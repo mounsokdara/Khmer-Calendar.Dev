@@ -6,7 +6,7 @@
 ++ sort -V
 + AAPT=/usr/local/lib/android/sdk/build-tools/37.0.0/aapt2
 ++ /usr/local/lib/android/sdk/build-tools/37.0.0/aapt2 dump badging khmer_calendar/build/app/outputs/flutter-apk/app-release.apk
-+ BADGING='package: name='\''com.mounsokdara.khmercalendar'\'' versionCode='\''60'\'' versionName='\''1.0.5'\'' platformBuildVersionName='\''16'\'' platformBuildVersionCode='\''36'\'' compileSdkVersion='\''36'\'' compileSdkVersionCodename='\''16'\''
++ BADGING='package: name='\''com.mounsokdara.khmercalendar'\'' versionCode='\''50'\'' versionName='\''1.0.4'\'' platformBuildVersionName='\''16'\'' platformBuildVersionCode='\''36'\'' compileSdkVersion='\''36'\'' compileSdkVersionCodename='\''16'\''
 minSdkVersion:'\''24'\''
 targetSdkVersion:'\''36'\''
 uses-permission: name='\''android.permission.INTERNET'\''
@@ -133,7 +133,7 @@ locales: '\''--_--'\'' '\''af'\'' '\''am'\'' '\''ar'\'' '\''as'\'' '\''az'\'' '\
 densities: '\''160'\'' '\''240'\'' '\''320'\'' '\''480'\'' '\''640'\'' '\''65534'\''
 native-code: '\''arm64-v8a'\'' '\''armeabi-v7a'\'' '\''x86_64'\'''
 + head -n 1
-+ echo 'package: name='\''com.mounsokdara.khmercalendar'\'' versionCode='\''60'\'' versionName='\''1.0.5'\'' platformBuildVersionName='\''16'\'' platformBuildVersionCode='\''36'\'' compileSdkVersion='\''36'\'' compileSdkVersionCodename='\''16'\''
++ echo 'package: name='\''com.mounsokdara.khmercalendar'\'' versionCode='\''50'\'' versionName='\''1.0.4'\'' platformBuildVersionName='\''16'\'' platformBuildVersionCode='\''36'\'' compileSdkVersion='\''36'\'' compileSdkVersionCodename='\''16'\''
 minSdkVersion:'\''24'\''
 targetSdkVersion:'\''36'\''
 uses-permission: name='\''android.permission.INTERNET'\''
@@ -259,7 +259,7 @@ supports-any-density: '\''true'\''
 locales: '\''--_--'\'' '\''af'\'' '\''am'\'' '\''ar'\'' '\''as'\'' '\''az'\'' '\''be'\'' '\''bg'\'' '\''bn'\'' '\''bs'\'' '\''ca'\'' '\''cs'\'' '\''da'\'' '\''de'\'' '\''el'\'' '\''en-AU'\'' '\''en-CA'\'' '\''en-GB'\'' '\''en-IN'\'' '\''en-XC'\'' '\''es'\'' '\''es-419'\'' '\''es-US'\'' '\''et'\'' '\''eu'\'' '\''fa'\'' '\''fi'\'' '\''fr'\'' '\''fr-CA'\'' '\''gl'\'' '\''gu'\'' '\''hi'\'' '\''hr'\'' '\''hu'\'' '\''hy'\'' '\''in'\'' '\''is'\'' '\''it'\'' '\''iw'\'' '\''ja'\'' '\''ka'\'' '\''kk'\'' '\''km'\'' '\''kn'\'' '\''ko'\'' '\''ky'\'' '\''lo'\'' '\''lt'\'' '\''lv'\'' '\''mk'\'' '\''ml'\'' '\''mn'\'' '\''mr'\'' '\''ms'\'' '\''my'\'' '\''nb'\'' '\''ne'\'' '\''nl'\'' '\''or'\'' '\''pa'\'' '\''pl'\'' '\''pt'\'' '\''pt-BR'\'' '\''pt-PT'\'' '\''ro'\'' '\''ru'\'' '\''si'\'' '\''sk'\'' '\''sl'\'' '\''sq'\'' '\''sr'\'' '\''sr-Latn'\'' '\''sv'\'' '\''sw'\'' '\''ta'\'' '\''te'\'' '\''th'\'' '\''tl'\'' '\''tr'\'' '\''uk'\'' '\''ur'\'' '\''uz'\'' '\''vi'\'' '\''zh-CN'\'' '\''zh-HK'\'' '\''zh-TW'\'' '\''zu'\''
 densities: '\''160'\'' '\''240'\'' '\''320'\'' '\''480'\'' '\''640'\'' '\''65534'\''
 native-code: '\''arm64-v8a'\'' '\''armeabi-v7a'\'' '\''x86_64'\'''
-package: name='com.mounsokdara.khmercalendar' versionCode='60' versionName='1.0.5' platformBuildVersionName='16' platformBuildVersionCode='36' compileSdkVersion='36' compileSdkVersionCodename='16'
+package: name='com.mounsokdara.khmercalendar' versionCode='50' versionName='1.0.4' platformBuildVersionName='16' platformBuildVersionCode='36' compileSdkVersion='36' compileSdkVersionCodename='16'
 ++ ls /usr/local/lib/android/sdk/build-tools/34.0.0/dexdump /usr/local/lib/android/sdk/build-tools/35.0.0/dexdump /usr/local/lib/android/sdk/build-tools/35.0.1/dexdump /usr/local/lib/android/sdk/build-tools/36.0.0/dexdump /usr/local/lib/android/sdk/build-tools/36.1.0/dexdump /usr/local/lib/android/sdk/build-tools/37.0.0/dexdump
 ++ sort -V
 ++ tail -1
