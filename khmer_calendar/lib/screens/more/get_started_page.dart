@@ -10,8 +10,8 @@ import '../../net.dart';
 import '../../permissions.dart';
 import '../../reminders.dart';
 import '../../store.dart';
-import '../../widgets/os_logo.dart';
 import '../../widgets/overlay_page.dart';
+import '../../widgets/package_downloads.dart';
 import '../../widgets/segmented_list.dart';
 import 'install_helpers.dart';
 
@@ -232,25 +232,7 @@ class _GetStartedPageState extends State<GetStartedPage> {
                               ],
                             ),
                           if (kIsWeb) const SizedBox(height: 12),
-                          SegmentedGroup(
-                            padding: EdgeInsets.zero,
-                            children: [
-                              for (final p in [
-                                ('android', 'KhmerCalendar.apk', 'exportApk', 'exportApkSub'),
-                                ('windows', 'KhmerCalendar-windows.zip', 'exportWindows', 'exportWindowsSub'),
-                                ('macos', 'KhmerCalendar.dmg', 'exportMac', 'exportMacSub'),
-                                ('linux', 'KhmerCalendar-linux.tar.gz', 'exportLinux', 'exportLinuxSub'),
-                              ])
-                                SegmentedTile(
-                                  dim: !online,
-                                  leading: OsLogo(p.$1),
-                                  title: t(ui, p.$3),
-                                  subtitle: t(ui, p.$4),
-                                  trailing: const Icon(Icons.download),
-                                  onTap: () => openPackDownload(context, lang: ui, file: p.$2),
-                                ),
-                            ],
-                          ),
+                          PackageDownloads(lang: ui, online: online, compact: true),
                         ],
                       );
                     },
