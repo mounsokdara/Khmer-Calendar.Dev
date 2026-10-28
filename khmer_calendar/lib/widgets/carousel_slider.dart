@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 class CarouselSlider extends StatefulWidget {
@@ -76,6 +77,40 @@ class _CarouselSliderState extends State<CarouselSlider> {
         keys.contains(LogicalKeyboardKey.altRight);
   }
 
+  /// True if a vertical scrollable ancestor can still move in the direction of [dy].
+  ///
+  /// Positive [dy] = scroll down (increase offset); negative = scroll up.
+  /// Walks ancestors from this widget outward, so the horizontal PageView
+  /// (a descendant) is never considered.
+  bool _verticalParentCanScroll(double dy) {
+    if (dy == 0) return false;
+
+    ScrollableState? vertical;
+    context.visitAncestorElements((element) {
+      if (element is StatefulElement && element.state is ScrollableState) {
+        final state = element.state as ScrollableState;
+        final dir = state.axisDirection;
+        if (dir == AxisDirection.down || dir == AxisDirection.up) {
+          vertical = state;
+          return false; // stop at nearest vertical scrollable
+        }
+      }
+      return true;
+    });
+
+    final pos = vertical?.position;
+    if (pos == null || !pos.hasPixels || !pos.hasContentDimensions) {
+      return false;
+    }
+
+    // dy > 0 → user scrolled down → needs room below (pixels < max)
+    // dy < 0 → user scrolled up   → needs room above (pixels > min)
+    if (dy > 0) {
+      return pos.pixels < pos.maxScrollExtent - 0.5;
+    }
+    return pos.pixels > pos.minScrollExtent + 0.5;
+  }
+
   /// Page by one step from [delta]. Positive → next, negative → previous.
   Future<void> _pageBy(double delta) async {
     if (_paging || !_controller.hasClients) return;
@@ -105,28 +140,36 @@ class _CarouselSliderState extends State<CarouselSlider> {
     final dy = event.scrollDelta.dy;
     final alt = _altHeld;
 
-    // Axis policy (Alt swaps the action type):
+    // Decide whether this wheel event should drive horizontal month paging.
     //
-    //   No Alt  → only horizontal intent pages months.
-    //             Vertical wheel is left alone so a parent ListView can scroll.
-    //   Alt     → vertical wheel is remapped to horizontal paging (axes swapped).
-    //             Horizontal delta is ignored while Alt is held to avoid double action.
+    //   Alt held  → always claim the signal for horizontal paging and block
+    //               the parent vertical ListView (PointerSignalResolver).
+    //   No Alt    → horizontal delta pages months;
+    //               vertical delta pages months only when the vertical parent
+    //               cannot scroll further (or there is none).
     //
     double? delta;
+
     if (alt) {
-      // Swap: use vertical (or dominant) delta for horizontal paging.
       if (dy.abs() >= _wheelThreshold || dx.abs() >= _wheelThreshold) {
         delta = dy.abs() >= dx.abs() ? dy : dx;
       }
-    } else {
-      // Default: only clear horizontal scroll drives paging.
-      if (dx.abs() > dy.abs() && dx.abs() >= _wheelThreshold) {
-        delta = dx;
-      }
+    } else if (dx.abs() > dy.abs() && dx.abs() >= _wheelThreshold) {
+      delta = dx;
+    } else if (dy.abs() >= _wheelThreshold && !_verticalParentCanScroll(dy)) {
+      delta = dy;
     }
 
     if (delta == null) return;
-    _pageBy(delta);
+
+    final useDelta = delta;
+
+    // Claim exclusive handling so Scrollable ancestors do not also apply the
+    // delta. Required when Alt is held (block vertical) and when we steal a
+    // vertical wheel that the parent cannot use.
+    GestureBinding.instance.pointerSignalResolver.register(event, (_) {
+      _pageBy(useDelta);
+    });
   }
 
   @override
