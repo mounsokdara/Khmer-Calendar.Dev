@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class CarouselSlider extends StatefulWidget {
   const CarouselSlider({
@@ -23,6 +24,9 @@ class CarouselSlider extends StatefulWidget {
 
 class _CarouselSliderState extends State<CarouselSlider> {
   late final PageController _controller;
+
+  /// Ignore tiny wheel ticks so trackpads/mice do not spam pages.
+  static const double _wheelThreshold = 20;
 
   @override
   void initState() {
@@ -63,22 +67,69 @@ class _CarouselSliderState extends State<CarouselSlider> {
     widget.onIndexChanged?.call(i);
   }
 
+  bool get _altHeld {
+    final keys = HardwareKeyboard.instance.logicalKeysPressed;
+    return keys.contains(LogicalKeyboardKey.altLeft) ||
+        keys.contains(LogicalKeyboardKey.altRight);
+  }
+
+  void _onPointerSignal(PointerSignalEvent event) {
+    if (event is! PointerScrollEvent) return;
+    if (!_controller.hasClients) return;
+
+    // Prefer the dominant axis so both vertical wheel and horizontal trackpad work.
+    final dx = event.scrollDelta.dx;
+    final dy = event.scrollDelta.dy;
+    var delta = dy.abs() >= dx.abs() ? dy : dx;
+
+    // Alt changes scroll action type: reverse direction.
+    if (_altHeld) delta = -delta;
+
+    if (delta.abs() < _wheelThreshold) return;
+
+    final page = _controller.page ?? widget.index.toDouble();
+    if (delta > 0) {
+      // Scroll down / right → next month
+      final next = (page.floor() + 1).clamp(0, _lastPage);
+      if (next > page.round() || (page - page.round()).abs() < 0.01 && next != page.round()) {
+        _controller.animateToPage(
+          next,
+          duration: const Duration(milliseconds: 280),
+          curve: Curves.easeOutCubic,
+        );
+      }
+    } else {
+      // Scroll up / left → previous month
+      final prev = (page.ceil() - 1).clamp(0, _lastPage);
+      if (prev < page.round() || (page - page.round()).abs() < 0.01 && prev != page.round()) {
+        _controller.animateToPage(
+          prev,
+          duration: const Duration(milliseconds: 280),
+          curve: Curves.easeOutCubic,
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return ScrollConfiguration(
-      behavior: ScrollConfiguration.of(context).copyWith(
-        dragDevices: {
-          PointerDeviceKind.touch,
-          PointerDeviceKind.mouse,
-          PointerDeviceKind.stylus,
-          PointerDeviceKind.trackpad,
-        },
-      ),
-      child: PageView.builder(
-        controller: _controller,
-        itemCount: widget.itemCount,
-        onPageChanged: _onPage,
-        itemBuilder: widget.itemBuilder,
+    return Listener(
+      onPointerSignal: _onPointerSignal,
+      child: ScrollConfiguration(
+        behavior: ScrollConfiguration.of(context).copyWith(
+          dragDevices: {
+            PointerDeviceKind.touch,
+            PointerDeviceKind.mouse,
+            PointerDeviceKind.stylus,
+            PointerDeviceKind.trackpad,
+          },
+        ),
+        child: PageView.builder(
+          controller: _controller,
+          itemCount: widget.itemCount,
+          onPageChanged: _onPage,
+          itemBuilder: widget.itemBuilder,
+        ),
       ),
     );
   }
