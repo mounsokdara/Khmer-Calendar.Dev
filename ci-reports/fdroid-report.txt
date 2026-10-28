@@ -2,8 +2,8 @@
 + APK=khmer_calendar/build/app/outputs/flutter-apk/app-release.apk
 + test -f khmer_calendar/build/app/outputs/flutter-apk/app-release.apk
 ++ ls /usr/local/lib/android/sdk/build-tools/34.0.0/aapt2 /usr/local/lib/android/sdk/build-tools/35.0.0/aapt2 /usr/local/lib/android/sdk/build-tools/35.0.1/aapt2 /usr/local/lib/android/sdk/build-tools/36.0.0/aapt2 /usr/local/lib/android/sdk/build-tools/36.1.0/aapt2 /usr/local/lib/android/sdk/build-tools/37.0.0/aapt2
-++ tail -1
 ++ sort -V
+++ tail -1
 + AAPT=/usr/local/lib/android/sdk/build-tools/37.0.0/aapt2
 ++ /usr/local/lib/android/sdk/build-tools/37.0.0/aapt2 dump badging khmer_calendar/build/app/outputs/flutter-apk/app-release.apk
 + BADGING='package: name='\''com.mounsokdara.khmercalendar'\'' versionCode='\''60'\'' versionName='\''1.0.5'\'' platformBuildVersionName='\''16'\'' platformBuildVersionCode='\''36'\'' compileSdkVersion='\''36'\'' compileSdkVersionCodename='\''16'\''
@@ -16,6 +16,7 @@ uses-permission: name='\''android.permission.RECEIVE_BOOT_COMPLETED'\''
 uses-permission: name='\''android.permission.VIBRATE'\''
 uses-permission: name='\''android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS'\''
 uses-permission: name='\''android.permission.WAKE_LOCK'\''
+uses-permission: name='\''android.permission.REQUEST_INSTALL_PACKAGES'\''
 uses-permission: name='\''android.permission.SCHEDULE_EXACT_ALARM'\''
 uses-permission: name='\''android.permission.USE_EXACT_ALARM'\''
 uses-permission: name='\''android.permission.ACCESS_NETWORK_STATE'\''
@@ -143,6 +144,7 @@ uses-permission: name='\''android.permission.RECEIVE_BOOT_COMPLETED'\''
 uses-permission: name='\''android.permission.VIBRATE'\''
 uses-permission: name='\''android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS'\''
 uses-permission: name='\''android.permission.WAKE_LOCK'\''
+uses-permission: name='\''android.permission.REQUEST_INSTALL_PACKAGES'\''
 uses-permission: name='\''android.permission.SCHEDULE_EXACT_ALARM'\''
 uses-permission: name='\''android.permission.USE_EXACT_ALARM'\''
 uses-permission: name='\''android.permission.ACCESS_NETWORK_STATE'\''
