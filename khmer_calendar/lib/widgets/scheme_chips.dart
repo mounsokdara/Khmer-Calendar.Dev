@@ -1,4 +1,6 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../i18n.dart';
 import '../store.dart';
@@ -21,12 +23,67 @@ const colorPresets = [
   '#9A3B38',
 ];
 
-class SchemeChipScroller extends StatelessWidget {
+class SchemeChipScroller extends StatefulWidget {
   const SchemeChipScroller({super.key, required this.store});
   final AppStore store;
 
   @override
+  State<SchemeChipScroller> createState() => _SchemeChipScrollerState();
+}
+
+class _SchemeChipScrollerState extends State<SchemeChipScroller> {
+  final _ctrl = ScrollController();
+
+  static const double _wheelThreshold = 8;
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  bool get _altHeld {
+    final keys = HardwareKeyboard.instance.logicalKeysPressed;
+    return keys.contains(LogicalKeyboardKey.altLeft) ||
+        keys.contains(LogicalKeyboardKey.altRight);
+  }
+
+  void _scrollBy(double delta) {
+    if (!_ctrl.hasClients) return;
+    final pos = _ctrl.position;
+    if (!pos.hasPixels || !pos.hasContentDimensions) return;
+    final next = (pos.pixels + delta).clamp(
+      pos.minScrollExtent,
+      pos.maxScrollExtent,
+    );
+    if ((next - pos.pixels).abs() < 0.5) return;
+    _ctrl.jumpTo(next);
+  }
+
+  void _onPointerSignal(PointerSignalEvent event) {
+    if (event is! PointerScrollEvent) return;
+    if (!_ctrl.hasClients) return;
+
+    final dx = event.scrollDelta.dx;
+    final dy = event.scrollDelta.dy;
+
+    // Over the chip row: any meaningful wheel/trackpad delta scrolls chips
+    // horizontally. Claim the signal so the parent page does not also move
+    // (especially important while Alt is held).
+    final dominant = dy.abs() >= dx.abs() ? dy : dx;
+    if (dominant.abs() < _wheelThreshold) return;
+
+    // Alt reverses direction (same “change scroll action” idea as calendar).
+    final delta = _altHeld ? -dominant : dominant;
+
+    GestureBinding.instance.pointerSignalResolver.register(event, (_) {
+      _scrollBy(delta);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final store = widget.store;
     final enabled = store.materialYou && !store.dynamicColor;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -36,26 +93,40 @@ class SchemeChipScroller extends StatelessWidget {
           label: t(store.lang, 'schemeAria'),
           child: SizedBox(
             height: 76,
-            child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
-              scrollDirection: Axis.horizontal,
-              itemCount: schemes.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 8),
-              itemBuilder: (ctx, i) {
-                final s = schemes[i];
-                final selected = store.colorScheme == s.id;
-                return Opacity(
-                  opacity: store.dynamicColor || enabled ? 1 : 0.38,
-                  child: Tooltip(
-                    message: s.label,
-                    child: _SchemeChipButton(
-                      chip: s,
-                      selected: selected,
-                      onTap: enabled ? () => store.setColorScheme(s.id) : null,
-                    ),
-                  ),
-                );
-              },
+            child: Listener(
+              onPointerSignal: _onPointerSignal,
+              child: ScrollConfiguration(
+                behavior: ScrollConfiguration.of(context).copyWith(
+                  dragDevices: {
+                    PointerDeviceKind.touch,
+                    PointerDeviceKind.mouse,
+                    PointerDeviceKind.stylus,
+                    PointerDeviceKind.trackpad,
+                  },
+                ),
+                child: ListView.separated(
+                  controller: _ctrl,
+                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
+                  scrollDirection: Axis.horizontal,
+                  itemCount: schemes.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 8),
+                  itemBuilder: (ctx, i) {
+                    final s = schemes[i];
+                    final selected = store.colorScheme == s.id;
+                    return Opacity(
+                      opacity: store.dynamicColor || enabled ? 1 : 0.38,
+                      child: Tooltip(
+                        message: s.label,
+                        child: _SchemeChipButton(
+                          chip: s,
+                          selected: selected,
+                          onTap: enabled ? () => store.setColorScheme(s.id) : null,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
             ),
           ),
         ),
