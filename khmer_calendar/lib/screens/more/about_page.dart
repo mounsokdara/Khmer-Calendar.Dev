@@ -13,6 +13,8 @@ import '../../theme.dart';
 import '../../web_refresh.dart';
 import '../../widgets/overlay_page.dart';
 import '../../widgets/segmented_list.dart';
+import 'dev_update.dart' show devUpdateSupported;
+import 'dev_update_ui.dart';
 import 'update_checker.dart';
 
 const _githubProfile = 'https://github.com/mounsokdara';
@@ -308,7 +310,9 @@ class AboutPage extends StatelessWidget {
                               _LinkRow(
                                 icon: Icons.system_update_outlined,
                                 title: km ? 'ពិនិត្យកំណែថ្មី' : 'Check for updates',
-                                subtitle: km ? 'ពិនិត្យកំណែថ្មីពី GitHub' : 'Check GitHub for a newer release',
+                                subtitle: devUpdateSupported
+                                    ? (km ? 'ទាញយក និងដំឡើងកំណែសាកល្បងថ្មីបំផុត' : 'Download and install the latest dev build')
+                                    : (km ? 'ពិនិត្យកំណែថ្មីពី GitHub' : 'Check GitHub for a newer release'),
                                 external: false,
                                 onTap: () => _checkForUpdate(context, lang),
                               ),
@@ -355,6 +359,8 @@ class AboutPage extends StatelessWidget {
 
 Future<void> _checkForUpdate(BuildContext context, Lang lang) async {
   if (!context.mounted) return;
+  // Dev builds (Android): download + install the newest `dev-latest` APK inside the app, no browser.
+  if (devUpdateSupported) return runDevUpdateCheck(context, lang);
   showDialog<void>(
     context: context,
     barrierDismissible: false,

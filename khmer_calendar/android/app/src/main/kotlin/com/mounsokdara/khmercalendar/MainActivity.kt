@@ -6,6 +6,7 @@ import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -15,9 +16,11 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import android.provider.Settings
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import java.io.File
 import java.util.concurrent.Executors
 
 open class MainActivity : FlutterActivity() {
@@ -84,8 +87,53 @@ open class MainActivity : FlutterActivity() {
                     result.success(years)
                 }
                 "getLaunch" -> result.success(launchMap(intent))
+                "installInfo" -> result.success(installInfo())
+                "installApk" -> result.success(installApk(call.argument<String>("path")))
                 else -> result.notImplemented()
             }
+        }
+    }
+
+    // ---- In-app dev updater: what is installed, and hand a downloaded APK to the system installer ----
+
+    @Suppress("DEPRECATION")
+    private fun versionCodeOf(pi: PackageInfo): Long =
+        if (Build.VERSION.SDK_INT >= 28) pi.longVersionCode else pi.versionCode.toLong()
+
+    private fun updatesDir(): File = File(cacheDir, "updates")
+
+    private fun installInfo(): HashMap<String, Any>? = try {
+        val pi = packageManager.getPackageInfo(packageName, 0)
+        hashMapOf(
+            "versionCode" to versionCodeOf(pi),
+            "installedAt" to pi.lastUpdateTime,
+            "updatesDir" to updatesDir().path,
+        )
+    } catch (_: Throwable) {
+        null
+    }
+
+    /** Returns "started", "permission" (unknown-sources screen opened) or "failed". */
+    private fun installApk(path: String?): String {
+        if (path == null) return "failed"
+        return try {
+            // Only files inside our own updates folder may be handed to the installer.
+            val dir = updatesDir().canonicalFile
+            val file = File(path).canonicalFile
+            if (!file.path.startsWith(dir.path + File.separator) || !file.isFile) return "failed"
+            if (Build.VERSION.SDK_INT >= 26 && !packageManager.canRequestPackageInstalls()) {
+                startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).setData(Uri.parse("package:$packageName")))
+                return "permission"
+            }
+            val uri = FileProvider.getUriForFile(this, "$packageName.updates", file)
+            startActivity(
+                Intent(Intent.ACTION_VIEW)
+                    .setDataAndType(uri, "application/vnd.android.package-archive")
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            )
+            "started"
+        } catch (_: Throwable) {
+            "failed"
         }
     }
 

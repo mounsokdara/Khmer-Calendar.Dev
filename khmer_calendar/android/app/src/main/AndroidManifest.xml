@@ -8,6 +8,8 @@
     <uses-permission android:name="android.permission.VIBRATE"/>
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <!-- In-app dev updater: lets the app open the system installer for the APK it downloaded -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
     <application
@@ -269,6 +271,16 @@
             <meta-data
                 android:name="com.mounsokdara.khmercalendar.BootInitializer"
                 android:value="androidx.startup" />
+        </provider>
+        <!-- Hands the downloaded dev-update APK to the system installer (see update_file_paths.xml) -->
+        <provider
+            android:name=".UpdateFileProvider"
+            android:authorities="${applicationId}.updates"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/update_file_paths" />
         </provider>
         <receiver
             android:name=".BootReceiver"
