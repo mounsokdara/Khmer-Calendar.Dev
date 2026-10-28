@@ -180,12 +180,46 @@ Future<void> _downloadAndInstall(BuildContext context, Lang lang, DevBuild build
     );
     return;
   }
-  await _install(context, lang, path);
+  await _install(context, lang, path, build);
 }
 
-Future<void> _install(BuildContext context, Lang lang, String path) async {
-  final result = await installDevBuild(path);
-  if (result == DevInstallResult.started || !context.mounted) return;
+Future<void> _install(BuildContext context, Lang lang, String path, DevBuild build) async {
+  final result = await installDevBuild(path, build);
+  if (!context.mounted) return;
+
+  if (result == DevInstallResult.started) {
+    // Desktop: the updater is waiting for this app to quit; it swaps the files and starts the new version.
+    if (devUpdateRestartsApp) {
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => AlertDialog(
+          content: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.2)),
+              const SizedBox(width: 16),
+              Flexible(child: Text(_s(lang, 'កំពុងធ្វើបច្ចុប្បន្នភាព កម្មវិធីនឹងចាប់ផ្តើមឡើងវិញ…', 'Updating, the app will restart…'))),
+            ],
+          ),
+        ),
+      );
+      await finishDevInstall();
+    }
+    return;
+  }
+
+  if (result == DevInstallResult.notWritable) {
+    await _message(
+      context,
+      lang,
+      _s(lang, 'កំណែសាកល្បង', 'Dev build'),
+      _s(lang, 'មិនអាចសរសេរក្នុងថតកម្មវិធីបានទេ (ឧទាហរណ៍ Program Files)។ សូមផ្លាស់ទីកម្មវិធីទៅថតផ្សេង ឬធ្វើបច្ចុប្បន្នភាពដោយដៃ។',
+          'The app folder is read-only (for example Program Files). Move the app to a folder you can write to, or update manually.'),
+      extra: [_browserButton(lang)],
+    );
+    return;
+  }
 
   if (result == DevInstallResult.needsPermission) {
     final retry = await showDialog<bool>(
@@ -204,7 +238,7 @@ Future<void> _install(BuildContext context, Lang lang, String path) async {
         ],
       ),
     );
-    if (retry == true && context.mounted) await _install(context, lang, path);
+    if (retry == true && context.mounted) await _install(context, lang, path, build);
     return;
   }
 

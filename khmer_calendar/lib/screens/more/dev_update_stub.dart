@@ -9,4 +9,9 @@ Future<String> downloadDevBuild(DevBuild build, void Function(int received, int 
         {bool Function()? isCancelled}) async =>
     throw const DevUpdateException('Not supported on this platform');
 
-Future<DevInstallResult> installDevBuild(String path) async => DevInstallResult.failed;
+Future<DevInstallResult> installDevBuild(String path, DevBuild build) async => DevInstallResult.failed;
+
+/// True when installing closes the app and the updater restarts it (desktop).
+const bool devUpdateRestartsApp = false;
+
+Future<void> finishDevInstall() async {}

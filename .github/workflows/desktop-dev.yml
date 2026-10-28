@@ -1,0 +1,126 @@
+# Desktop dev builds for the in-app updater (About > Check for updates).
+# android.yml already refreshes the "dev-latest" pre-release with the Android APKs on every push to main; this file adds
+# the desktop packages and their updater programs to that same pre-release:
+#   KhmerCalendar-windows-{x64,arm64}.zip   + update-windows.exe
+#   KhmerCalendar-linux-{x64,arm64}.tar.gz  + update-linux-{x64,arm64}
+#   KhmerCalendar-macos-{arm64,x86_64,universal}.dmg + update-macos.sh
+# It does not touch android.yml, release.yml, windows.yml or macos.yml (windows.yml and macos.yml are only called).
+# Delete this file to stop publishing desktop dev builds.
+name: Desktop dev
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "khmer_calendar/**"
+      - "scripts/**"
+      - "tools/updater/**"
+      - ".github/workflows/desktop-dev.yml"
+
+concurrency:
+  group: desktop-dev-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    uses: ./.github/workflows/windows.yml
+    secrets: inherit
+
+  macos:
+    uses: ./.github/workflows/macos.yml
+    secrets: inherit
+
+  linux:
+    name: linux-${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    # The arm64 leg is best-effort so it can never block the rest.
+    continue-on-error: ${{ matrix.experimental }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x64, runner: ubuntu-latest, experimental: false }
+          - { arch: arm64, runner: ubuntu-24.04-arm, experimental: true }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.4"
+          channel: stable
+          cache: true
+      - name: Linux toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+      - run: flutter pub get
+        working-directory: khmer_calendar
+      - run: flutter build linux --release
+        working-directory: khmer_calendar
+      - name: Pack linux
+        run: tar -C khmer_calendar/build/linux/${{ matrix.arch }}/release/bundle -czf KhmerCalendar-linux-${{ matrix.arch }}.tar.gz .
+      - name: Build the updater
+        run: dart compile exe tools/updater/update.dart -o update-linux-${{ matrix.arch }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-linux-${{ matrix.arch }}
+          path: |
+            KhmerCalendar-linux-${{ matrix.arch }}.tar.gz
+            update-linux-${{ matrix.arch }}
+
+  updater-windows:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.4"
+          channel: stable
+          cache: true
+          architecture: x64
+      # One x64 updater serves x64 and arm64 Windows (arm64 runs it through emulation).
+      - run: dart compile exe tools/updater/update.dart -o update-windows.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-updater-windows
+          path: update-windows.exe
+
+  publish:
+    needs: [windows, macos, linux, updater-windows]
+    # Publish whatever was built, even if a best-effort leg (arm64) failed.
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+      - name: Wait for this commit's dev-latest pre-release (android.yml creates it)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for i in $(seq 1 90); do
+            T=$(gh release view dev-latest --repo "$GITHUB_REPOSITORY" --json targetCommitish -q .targetCommitish 2>/dev/null || true)
+            if [ "$T" = "$GITHUB_SHA" ]; then exit 0; fi
+            # Run by hand: android.yml did not run for this commit, use the release that exists.
+            if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ -n "$T" ]; then exit 0; fi
+            sleep 20
+          done
+          echo "::error::dev-latest for $GITHUB_SHA never appeared (android.yml creates it)"
+          exit 1
+      - name: Upload to dev-latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir out
+          find dist -type f \( -name 'KhmerCalendar-windows-*.zip' -o -name 'KhmerCalendar-linux-*.tar.gz' -o -name 'KhmerCalendar-macos-*.dmg' \
+            -o -name 'update-windows.exe' -o -name 'update-linux-*' \) -exec cp -t out {} +
+          cp tools/updater/update-macos.sh out/
+          ls -lh out
+          gh release upload dev-latest out/* --clobber --repo "$GITHUB_REPOSITORY"

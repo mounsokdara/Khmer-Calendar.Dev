@@ -14,9 +14,11 @@ class DevBuild {
     required this.builtAt,
     required this.sha,
     required this.isNewer,
+    this.updaterName = '',
+    this.updaterUrl = '',
   });
 
-  /// `arm64`, `arm32`, `x64`, `arm32_64` or `universal`.
+  /// Android: `arm64`, `arm32`, `x64`, `arm32_64` or `universal`. Desktop: `x64`, `arm64` (macOS also `x86_64`).
   final String package;
   final String assetName;
   final String url;
@@ -32,6 +34,10 @@ class DevBuild {
 
   /// True when this build was made after the installed one.
   final bool isNewer;
+
+  /// Desktop only: the small updater program (update.exe on Windows) that swaps the files after the app quits.
+  final String updaterName;
+  final String updaterUrl;
 }
 
 enum DevInstallResult {
@@ -40,6 +46,9 @@ enum DevInstallResult {
 
   /// "Install unknown apps" has to be allowed for this app first (its settings page was opened).
   needsPermission,
+
+  /// Desktop: the folder the app lives in cannot be written (for example Program Files).
+  notWritable,
   failed,
 }
 

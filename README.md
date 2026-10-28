@@ -24,6 +24,9 @@ flutter run -d chrome
 ## Download:
 [In my GitHub Releases](https://github.com/mounsokdara/Khmer-Calendar/releases/latest)
 
+## Dev builds: update inside the app
+In this dev repo every push to `main` publishes the Android APKs (`android.yml`) and the Windows, Linux and macOS packages (`desktop-dev.yml`) to the `dev-latest` pre-release, each with its updater. **About > Check for updates** downloads the right package for your device and installs it without opening GitHub: Android opens the system installer; on Windows (`update.exe`), Linux and macOS a small updater waits for the app to quit, swaps the files and restarts it. Source: `khmer_calendar/lib/screens/more/dev_update*.dart`, `tools/updater/`.
+
 ## Privacy
 [Privacy Policy](PRIVACY.md): no accounts, ads or analytics; your data stays on your device.
 
