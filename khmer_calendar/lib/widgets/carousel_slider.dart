@@ -28,6 +28,9 @@ class _CarouselSliderState extends State<CarouselSlider> {
   /// Ignore tiny wheel ticks so trackpads/mice do not spam pages.
   static const double _wheelThreshold = 20;
 
+  /// Guard against overlapping animateToPage calls from rapid wheel events.
+  bool _paging = false;
+
   @override
   void initState() {
     super.initState();
@@ -73,42 +76,57 @@ class _CarouselSliderState extends State<CarouselSlider> {
         keys.contains(LogicalKeyboardKey.altRight);
   }
 
+  /// Page by one step from [delta]. Positive → next, negative → previous.
+  Future<void> _pageBy(double delta) async {
+    if (_paging || !_controller.hasClients) return;
+    final page = _controller.page ?? widget.index.toDouble();
+    final target = delta > 0
+        ? (page.round() + 1).clamp(0, _lastPage)
+        : (page.round() - 1).clamp(0, _lastPage);
+    if (target == page.round()) return;
+
+    _paging = true;
+    try {
+      await _controller.animateToPage(
+        target,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+      );
+    } finally {
+      if (mounted) _paging = false;
+    }
+  }
+
   void _onPointerSignal(PointerSignalEvent event) {
     if (event is! PointerScrollEvent) return;
-    if (!_controller.hasClients) return;
+    if (!_controller.hasClients || _paging) return;
 
-    // Prefer the dominant axis so both vertical wheel and horizontal trackpad work.
     final dx = event.scrollDelta.dx;
     final dy = event.scrollDelta.dy;
-    var delta = dy.abs() >= dx.abs() ? dy : dx;
+    final alt = _altHeld;
 
-    // Alt changes scroll action type: reverse direction.
-    if (_altHeld) delta = -delta;
-
-    if (delta.abs() < _wheelThreshold) return;
-
-    final page = _controller.page ?? widget.index.toDouble();
-    if (delta > 0) {
-      // Scroll down / right → next month
-      final next = (page.floor() + 1).clamp(0, _lastPage);
-      if (next > page.round() || (page - page.round()).abs() < 0.01 && next != page.round()) {
-        _controller.animateToPage(
-          next,
-          duration: const Duration(milliseconds: 280),
-          curve: Curves.easeOutCubic,
-        );
+    // Axis policy (Alt swaps the action type):
+    //
+    //   No Alt  → only horizontal intent pages months.
+    //             Vertical wheel is left alone so a parent ListView can scroll.
+    //   Alt     → vertical wheel is remapped to horizontal paging (axes swapped).
+    //             Horizontal delta is ignored while Alt is held to avoid double action.
+    //
+    double? delta;
+    if (alt) {
+      // Swap: use vertical (or dominant) delta for horizontal paging.
+      if (dy.abs() >= _wheelThreshold || dx.abs() >= _wheelThreshold) {
+        delta = dy.abs() >= dx.abs() ? dy : dx;
       }
     } else {
-      // Scroll up / left → previous month
-      final prev = (page.ceil() - 1).clamp(0, _lastPage);
-      if (prev < page.round() || (page - page.round()).abs() < 0.01 && prev != page.round()) {
-        _controller.animateToPage(
-          prev,
-          duration: const Duration(milliseconds: 280),
-          curve: Curves.easeOutCubic,
-        );
+      // Default: only clear horizontal scroll drives paging.
+      if (dx.abs() > dy.abs() && dx.abs() >= _wheelThreshold) {
+        delta = dx;
       }
     }
+
+    if (delta == null) return;
+    _pageBy(delta);
   }
 
   @override
