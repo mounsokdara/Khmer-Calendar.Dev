@@ -32,15 +32,14 @@ jobs:
   windows:
     name: windows-${{ matrix.arch }}
     runs-on: ${{ matrix.runner }}
-    # The arm64 leg is best-effort so it can never block the rest.
-    continue-on-error: ${{ matrix.experimental }}
+    # x64 only: `flutter build windows` has no --target-platform option in this Flutter version, so an arm64 package cannot be
+    # built. Windows on ARM runs the x64 build through emulation, and the in-app updater falls back to it.
     timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { arch: x64, runner: windows-latest, experimental: false }
-          - { arch: arm64, runner: windows-11-arm, experimental: true }
+          - { arch: x64, runner: windows-latest }
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -48,7 +47,6 @@ jobs:
           flutter-version: "3.47.4"
           channel: stable
           cache: true
-          # The Windows Flutter SDK is x64 only (it runs emulated on the arm64 runner); the app itself is built natively for matrix.arch.
           architecture: x64
       - run: flutter pub get
         working-directory: khmer_calendar
@@ -58,8 +56,7 @@ jobs:
         env:
           CXXFLAGS: /D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS
         run: |
-          $extra = if ('${{ matrix.arch }}' -eq 'arm64') { @('--target-platform', 'windows-arm64') } else { @() }
-          flutter build windows --release @extra 2>&1 | Tee-Object -Variable log | Out-Host
+          flutter build windows --release 2>&1 | Tee-Object -Variable log | Out-Host
           if ($LASTEXITCODE -ne 0) {
             # The job log is hard to reach from outside, an annotation is not.
             $tail = (($log | Select-Object -Last 25) -join ' | ') -replace '[\r\n]+', ' '

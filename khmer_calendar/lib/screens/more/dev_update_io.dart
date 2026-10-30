@@ -30,8 +30,9 @@ const _headers = {'Accept': 'application/vnd.github+json', 'User-Agent': 'khmer-
 /// (for example while CI is still uploading). `isNewer` says whether it is newer than what is installed.
 Future<DevBuild?> fetchDevBuild() async {
   // Names of the files CI puts into the `dev-latest` pre-release (android.yml and desktop-dev.yml).
-  late final String package;
-  late final String assetName;
+  late String package;
+  late String assetName;
+  String? fallbackPackage; // Windows on ARM runs the x64 build through emulation
   var updaterName = '';
   DateTime? installedAt;
 
@@ -50,6 +51,7 @@ Future<DevBuild?> fetchDevBuild() async {
       if (arch != 'x64' && arch != 'arm64') return null;
       package = arch!;
       assetName = 'KhmerCalendar-windows-$arch.zip';
+      if (arch == 'arm64') fallbackPackage = 'x64';
       updaterName = 'update-windows.exe';
     } else if (Platform.isLinux) {
       if (arch != 'x64' && arch != 'arm64') return null;
@@ -75,7 +77,12 @@ Future<DevBuild?> fetchDevBuild() async {
   Map<String, dynamic>? find(String name) =>
       assets.where((a) => a['name'] == name && a['state'] == 'uploaded').firstOrNull;
 
-  final asset = find(assetName);
+  var asset = find(assetName);
+  if (asset == null && fallbackPackage != null) {
+    package = fallbackPackage;
+    assetName = 'KhmerCalendar-windows-$package.zip';
+    asset = find(assetName);
+  }
   if (asset == null) return null;
   final updater = updaterName.isEmpty ? null : find(updaterName);
   if (updaterName.isNotEmpty && updater == null) return null; // package without its updater: not installable yet
