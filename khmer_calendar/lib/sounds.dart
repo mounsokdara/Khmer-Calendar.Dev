@@ -58,7 +58,6 @@ class WheelConfig {
   }
 
   String? soundAsset(String id) => sound(id)?['asset']?.toString();
-  int soundStartMs(String id) => (sound(id)?['start_ms'] as num?)?.toInt() ?? 0;
   String soundLabel(String id, {required bool khmer}) =>
       sound(id)?[khmer ? 'km' : 'en']?.toString() ?? id;
 }
@@ -152,11 +151,7 @@ class AppSounds {
         await player.stop();
       } catch (_) {}
       if (gen != _gen) return;
-      final startMs = config.soundStartMs(id);
-      await player.play(
-        source,
-        position: startMs > 0 ? Duration(milliseconds: startMs) : Duration.zero,
-      );
+      await player.play(source);
     } catch (e) {
       debugPrint('wheel sound failed: $e');
     }
