@@ -4,7 +4,10 @@
 #   KhmerCalendar-windows-{x64,arm64}.zip   + update-windows.exe
 #   KhmerCalendar-linux-{x64,arm64}.tar.gz  + update-linux-{x64,arm64}
 #   KhmerCalendar-macos-{arm64,x86_64,universal}.dmg + update-macos.sh
-# It does not touch android.yml, release.yml, windows.yml or macos.yml (windows.yml and macos.yml are only called).
+# It does not touch android.yml, release.yml, windows.yml or macos.yml.
+# Dev builds are NOT signed with the release certificate: the Dev repo has no DESKTOP_SIGN_* secrets, and windows.yml /
+# macos.yml fail without them. Windows is left unsigned; macOS gets an ad-hoc signature (Apple Silicon refuses unsigned code).
+# The updater downloads over HTTP, so neither SmartScreen nor Gatekeeper quarantine applies to what it installs.
 # Delete this file to stop publishing desktop dev builds.
 name: Desktop dev
 
@@ -27,12 +30,109 @@ permissions:
 
 jobs:
   windows:
-    uses: ./.github/workflows/windows.yml
-    secrets: inherit
+    name: windows-${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    # The arm64 leg is best-effort so it can never block the rest.
+    continue-on-error: ${{ matrix.experimental }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x64, runner: windows-latest, experimental: false }
+          - { arch: arm64, runner: windows-11-arm, experimental: true }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.4"
+          channel: stable
+          cache: true
+          # The Windows Flutter SDK is x64 only (it runs emulated on the arm64 runner); the app itself is built natively for matrix.arch.
+          architecture: x64
+      - run: flutter pub get
+        working-directory: khmer_calendar
+      - name: Build windows
+        shell: pwsh
+        working-directory: khmer_calendar
+        env:
+          CXXFLAGS: /D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS
+        run: |
+          $extra = if ('${{ matrix.arch }}' -eq 'arm64') { @('--target-platform', 'windows-arm64') } else { @() }
+          flutter build windows --release @extra 2>&1 | Tee-Object -Variable log | Out-Host
+          if ($LASTEXITCODE -ne 0) {
+            # The job log is hard to reach from outside, an annotation is not.
+            $tail = (($log | Select-Object -Last 25) -join ' | ') -replace '[\r\n]+', ' '
+            Write-Host "::error title=flutter build windows failed::$tail"
+            exit 1
+          }
+      - name: Bundle Visual C++ runtime (so it runs without the redistributable installed)
+        shell: pwsh
+        run: ./scripts/bundle-vcruntime.ps1 -Dir khmer_calendar\build\windows\${{ matrix.arch }}\runner\Release -Arch ${{ matrix.arch }}
+      - name: Pack windows
+        shell: pwsh
+        run: Compress-Archive -Path khmer_calendar\build\windows\${{ matrix.arch }}\runner\Release\* -DestinationPath KhmerCalendar-windows-${{ matrix.arch }}.zip
+      - name: Verify package (runtime DLLs + icon)
+        shell: pwsh
+        run: ./scripts/verify-windows.ps1 -Zip KhmerCalendar-windows-${{ matrix.arch }}.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-windows-${{ matrix.arch }}
+          path: KhmerCalendar-windows-${{ matrix.arch }}.zip
 
-  macos:
-    uses: ./.github/workflows/macos.yml
-    secrets: inherit
+  macos-build:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.4"
+          channel: stable
+          cache: true
+      - run: flutter pub get
+        working-directory: khmer_calendar
+      - run: flutter build macos --release
+        working-directory: khmer_calendar
+      - name: Keep the universal app (tar keeps symlinks and permissions)
+        run: |
+          APP=$(find khmer_calendar/build/macos -name "*.app" | head -1)
+          tar -C "$(dirname "$APP")" -cf macos-app.tar "$(basename "$APP")"
+          lipo -archs "$APP/Contents/MacOS/"* || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-macos-app
+          path: macos-app.tar
+          retention-days: 1
+
+  macos-pack:
+    name: macos-${{ matrix.arch }}
+    needs: macos-build
+    runs-on: macos-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [arm64, x86_64, universal]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: desktop-macos-app
+      - name: Thin (if needed), ad-hoc sign and pack
+        run: |
+          mkdir app && tar -C app -xf macos-app.tar
+          APP=$(find app -maxdepth 1 -name "*.app" | head -1)
+          if [ "${{ matrix.arch }}" != "universal" ]; then bash scripts/thin-macos.sh "$APP" "${{ matrix.arch }}"; fi
+          # Ad-hoc signature ("-"): thinning breaks the old one, and Apple Silicon will not start unsigned code.
+          codesign --force --deep --sign - "$APP"
+          codesign --verify --deep --strict "$APP"
+          hdiutil create -volname "Khmer Calendar" -srcfolder "$APP" -ov -format UDZO "KhmerCalendar-macos-${{ matrix.arch }}.dmg"
+          ls -lh "KhmerCalendar-macos-${{ matrix.arch }}.dmg"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-macos-${{ matrix.arch }}
+          path: KhmerCalendar-macos-${{ matrix.arch }}.dmg
 
   linux:
     name: linux-${{ matrix.arch }}
@@ -91,7 +191,7 @@ jobs:
           path: update-windows.exe
 
   publish:
-    needs: [windows, macos, linux, updater-windows]
+    needs: [windows, macos-pack, linux, updater-windows]
     # Publish whatever was built, even if a best-effort leg (arm64) failed.
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
