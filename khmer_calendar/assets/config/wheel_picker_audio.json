@@ -95,6 +95,132 @@
       "km": "គោះតុ"
     },
     {
+      "id": "tick_deep",
+      "asset": "sounds/tick_deep.ogg",
+      "start_ms": 0,
+      "en": "Deep Tick",
+      "km": "ចុចទាប"
+    },
+    {
+      "id": "tick_warm_1",
+      "asset": "sounds/tick_warm_1.ogg",
+      "start_ms": 0,
+      "en": "Warm Tick 1",
+      "km": "ចុចកក់ក្តៅ ១"
+    },
+    {
+      "id": "tick_warm_2",
+      "asset": "sounds/tick_warm_2.ogg",
+      "start_ms": 0,
+      "en": "Warm Tick 2",
+      "km": "ចុចកក់ក្តៅ ២"
+    },
+    {
+      "id": "tick_clear",
+      "asset": "sounds/tick_clear.ogg",
+      "start_ms": 0,
+      "en": "Clear Tick",
+      "km": "ចុចថ្លា"
+    },
+    {
+      "id": "tick_bright",
+      "asset": "sounds/tick_bright.ogg",
+      "start_ms": 0,
+      "en": "Bright Tick",
+      "km": "ចុចខ្ពស់"
+    },
+    {
+      "id": "tap_warm_1",
+      "asset": "sounds/tap_warm_1.ogg",
+      "start_ms": 0,
+      "en": "Warm Tap 1",
+      "km": "គោះកក់ក្តៅ ១"
+    },
+    {
+      "id": "tap_warm_2",
+      "asset": "sounds/tap_warm_2.ogg",
+      "start_ms": 0,
+      "en": "Warm Tap 2",
+      "km": "គោះកក់ក្តៅ ២"
+    },
+    {
+      "id": "tap_warm_3",
+      "asset": "sounds/tap_warm_3.ogg",
+      "start_ms": 0,
+      "en": "Warm Tap 3",
+      "km": "គោះកក់ក្តៅ ៣"
+    },
+    {
+      "id": "tap_clear_1",
+      "asset": "sounds/tap_clear_1.ogg",
+      "start_ms": 0,
+      "en": "Clear Tap 1",
+      "km": "គោះថ្លា ១"
+    },
+    {
+      "id": "tap_clear_2",
+      "asset": "sounds/tap_clear_2.ogg",
+      "start_ms": 0,
+      "en": "Clear Tap 2",
+      "km": "គោះថ្លា ២"
+    },
+    {
+      "id": "tap_bright_1",
+      "asset": "sounds/tap_bright_1.ogg",
+      "start_ms": 0,
+      "en": "Bright Tap 1",
+      "km": "គោះខ្ពស់ ១"
+    },
+    {
+      "id": "tap_bright_2",
+      "asset": "sounds/tap_bright_2.ogg",
+      "start_ms": 0,
+      "en": "Bright Tap 2",
+      "km": "គោះខ្ពស់ ២"
+    },
+    {
+      "id": "pulse_deep",
+      "asset": "sounds/pulse_deep.ogg",
+      "start_ms": 0,
+      "en": "Deep Pulse",
+      "km": "ចង្វាក់ទាប"
+    },
+    {
+      "id": "pulse_warm",
+      "asset": "sounds/pulse_warm.ogg",
+      "start_ms": 0,
+      "en": "Warm Pulse",
+      "km": "ចង្វាក់កក់ក្តៅ"
+    },
+    {
+      "id": "pulse_clear",
+      "asset": "sounds/pulse_clear.ogg",
+      "start_ms": 0,
+      "en": "Clear Pulse",
+      "km": "ចង្វាក់ថ្លា"
+    },
+    {
+      "id": "ring_deep_1",
+      "asset": "sounds/ring_deep_1.ogg",
+      "start_ms": 0,
+      "en": "Deep Ring 1",
+      "km": "រោទ៍ទាប ១"
+    },
+    {
+      "id": "ring_deep_2",
+      "asset": "sounds/ring_deep_2.ogg",
+      "start_ms": 0,
+      "en": "Deep Ring 2",
+      "km": "រោទ៍ទាប ២"
+    },
+    {
+      "id": "ring_warm",
+      "asset": "sounds/ring_warm.ogg",
+      "start_ms": 0,
+      "en": "Warm Ring",
+      "km": "រោទ៍កក់ក្តៅ"
+    },
+    {
       "id": "custom",
       "asset": null,
       "en": "Custom",
