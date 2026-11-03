@@ -31,10 +31,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
+        if: matrix.arch == 'x64'
         with:
           flutter-version: "3.47.4"
           channel: stable
           cache: true
+      # flutter-action cannot find an arm64 Linux SDK archive, so on the ARM runner
+      # Flutter is checked out from git at the same release tag.
+      - name: Flutter 3.47.4 (arm64, from git)
+        if: matrix.arch == 'arm64'
+        run: |
+          git clone --depth 1 --branch 3.47.4 https://github.com/flutter/flutter.git "$HOME/flutter"
+          echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
+          "$HOME/flutter/bin/flutter" --version
       - name: Linux toolchain
         run: |
           sudo apt-get update
