@@ -1,10 +1,3 @@
-# Android: standalone jobs, one per package (arm32, arm64, x64, arm32_64, universal).
-# Each job builds, aligns, signs (v1+v2+v3+v4) and verifies its own APK, uploads it as its own artifact and,
-# on pushes, as its own asset of the "dev-latest" pre-release (so nothing has to be unzipped from a bundle).
-# Version code = versionCode from pubspec.yaml * 10 + a digit per package (see build.gradle.kts), never the run number.
-#   Not possible with Flutter: x86 (32-bit Intel), x86_x64 (contains x86) and armeabi (ARMv5/v6). Flutter's
-#   --target-platform for Android only accepts android-arm, android-arm64 and android-x64 (in every build mode).
-# Runs on its own (Actions tab > Run workflow) or is called by release.yml.
 name: Android
 
 on:
@@ -25,7 +18,6 @@ permissions:
 
 jobs:
   prepare:
-    # Fresh empty pre-release that every package job uploads into (pushes only).
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
@@ -66,6 +58,21 @@ jobs:
           flutter-version: "3.47.4"
           channel: stable
           cache: true
+      # Gradle's own CMake download sometimes arrives corrupted ("Archive is not a ZIP archive" /
+      # "Install CMake 3.22.1 failed"). Install it up front with sdkmanager and retry instead.
+      - name: Install Android CMake (with retries)
+        run: |
+          SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          SDKM="$SDK/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKM" --licenses >/dev/null 2>&1 || true
+          for i in 1 2 3 4; do
+            rm -rf "$SDK/cmake/3.22.1" "$SDK/.temp" 2>/dev/null || true
+            if "$SDKM" --install "cmake;3.22.1" && [ -x "$SDK/cmake/3.22.1/bin/cmake" ]; then
+              echo "CMake installed on attempt $i"; exit 0
+            fi
+            echo "CMake install failed (attempt $i), retrying in $((i*15))s"; sleep $((i*15))
+          done
+          exit 1
       - name: Restore Android signing key
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
