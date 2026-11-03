@@ -1,7 +1,3 @@
-# Windows: one package per architecture (x64, arm64). Build, Authenticode-sign, bundle the Visual C++ runtime and zip the app.
-# The arm64 leg is best-effort (continue-on-error) so it can never block the x64 release.
-# Also builds the Microsoft Store .msix when the Store identity variables are set.
-# Runs on its own (Actions tab > Run workflow) or is called by release.yml.
 name: Windows
 
 on:
@@ -26,15 +22,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
+        if: matrix.arch == 'x64'
         with:
           flutter-version: "3.47.4"
           channel: stable
           cache: true
-          # The Windows Flutter SDK is x64 only (it runs emulated on the arm64 runner); the app itself is built natively for matrix.arch.
           architecture: x64
+      # The x64 Flutter SDK has no --target-platform for Windows, so the ARM runner installs Flutter from git
+      # at the same release tag. On an arm64 host, `flutter build windows` builds a native arm64 app by itself.
+      - name: Flutter 3.47.4 (arm64, from git)
+        if: matrix.arch == 'arm64'
+        shell: pwsh
+        run: |
+          git clone --depth 1 --branch 3.47.4 https://github.com/flutter/flutter.git "$env:USERPROFILE\flutter"
+          "$env:USERPROFILE\flutter\bin" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          & "$env:USERPROFILE\flutter\bin\flutter.bat" --version
       - run: flutter pub get
         working-directory: khmer_calendar
-      - run: flutter build windows --release ${{ matrix.arch == 'arm64' && '--target-platform windows-arm64' || '' }}
+      - run: flutter build windows --release
         working-directory: khmer_calendar
         env:
           CXXFLAGS: /D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS
