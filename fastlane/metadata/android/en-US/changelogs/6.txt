@@ -1,5 +1,6 @@
 Khmer Calendar 1.0.5
 - Added direct download and install for updates (no browser when ready)
+- More sounds
 - Mouse / trackpad: horizontal scroll changes months
 - Vertical wheel changes months when the page cannot scroll further
 - Hold Alt + scroll: change months and block vertical page scroll
