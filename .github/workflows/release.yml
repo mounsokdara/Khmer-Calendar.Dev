@@ -1,6 +1,10 @@
 name: Release
 
 on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**/*.md"
   workflow_dispatch:
 
 concurrency:
@@ -19,7 +23,7 @@ jobs:
   linux:
     name: linux-${{ matrix.arch }}
     runs-on: ${{ matrix.runner }}
-    # The arm64 leg is best-effort so it can never block the x64 release.
+    # The arm64 job is best-effort so it can never block the x64 release.
     continue-on-error: ${{ matrix.experimental }}
     timeout-minutes: 45
     strategy:
@@ -36,14 +40,14 @@ jobs:
           flutter-version: "3.47.4"
           channel: stable
           cache: true
-      # flutter-action cannot find an arm64 Linux SDK archive, so on the ARM runner
-      # Flutter is checked out from git at the same release tag.
-      - name: Flutter 3.47.4 (arm64, from git)
+      # No Linux arm64 SDK archive is published, so the arm64 job installs Flutter from git
+      # (the tool downloads the native arm64 Dart SDK itself).
+      - name: Flutter SDK 3.47.4 from git (arm64)
         if: matrix.arch == 'arm64'
         run: |
-          git clone --depth 1 --branch 3.47.4 https://github.com/flutter/flutter.git "$HOME/flutter"
-          echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
-          "$HOME/flutter/bin/flutter" --version
+          git clone --depth 1 --branch 3.47.4 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/flutter/bin/flutter" --version
       - name: Linux toolchain
         run: |
           sudo apt-get update
@@ -168,7 +172,8 @@ jobs:
           NOTES_FILE=".github/release-body.md"
           echo "Publishing ${TAG}"
           gh release delete "$TAG" --yes --cleanup-tag || true
-          gh release create "$TAG" release-files/* \
+          gh release create "$TAG" \
+            release-files/* \
             --target "$GITHUB_SHA" \
             --title "Khmer Calendar $TAG" \
             --notes-file "$NOTES_FILE" \

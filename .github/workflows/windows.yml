@@ -1,3 +1,7 @@
+# Windows: one standalone job per architecture (x64, arm64): build, Authenticode-sign, bundle the Visual C++ runtime,
+# then make the portable zip KhmerCalendar-windows-<arch>.zip. The "installers" job then builds the setup
+# wizards from those finished builds: KhmerCalendar-windows-x64-setup.exe, -arm64-setup.exe and -universal-setup.exe. The arm64 job is best-effort (continue-on-error) so it can never block a release.
+# Runs on its own (Actions tab > Run workflow) or is called by release.yml.
 name: Windows
 
 on:
@@ -27,16 +31,16 @@ jobs:
           flutter-version: "3.47.4"
           channel: stable
           cache: true
-          architecture: x64
-      # The x64 Flutter SDK has no --target-platform for Windows, so the ARM runner installs Flutter from git
-      # at the same release tag. On an arm64 host, `flutter build windows` builds a native arm64 app by itself.
-      - name: Flutter 3.47.4 (arm64, from git)
+      # Flutter builds for the architecture of the machine its own SDK runs on (there is no --target-platform for
+# Windows), so the arm64 job needs a native arm64 SDK. No arm64 archive is published, so use git (the tool
+      # downloads the native arm64 Dart SDK itself).
+      - name: Flutter SDK 3.47.4 from git (arm64)
         if: matrix.arch == 'arm64'
         shell: pwsh
         run: |
-          git clone --depth 1 --branch 3.47.4 https://github.com/flutter/flutter.git "$env:USERPROFILE\flutter"
-          "$env:USERPROFILE\flutter\bin" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
-          & "$env:USERPROFILE\flutter\bin\flutter.bat" --version
+          git clone --depth 1 --branch 3.47.4 https://github.com/flutter/flutter.git "$env:RUNNER_TEMP\flutter"
+          "$env:RUNNER_TEMP\flutter\bin" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+          & "$env:RUNNER_TEMP\flutter\bin\flutter.bat" --version
       - run: flutter pub get
         working-directory: khmer_calendar
       - run: flutter build windows --release
@@ -59,29 +63,59 @@ jobs:
       - name: Verify package (runtime DLLs + icon)
         shell: pwsh
         run: ./scripts/verify-windows.ps1 -Zip KhmerCalendar-windows-${{ matrix.arch }}.zip
+      # Setup wizard (Inno Setup): same signed files + runtime as the portable zip.
       - uses: actions/upload-artifact@v4
         with:
           name: windows-${{ matrix.arch }}
+          if-no-files-found: ignore
           path: KhmerCalendar-windows-${{ matrix.arch }}.zip
-      # Microsoft Store package. Needs the three values from Partner Center (Product >
-      # Product identity) saved as repository variables: Settings > Secrets and variables >
-      # Actions > Variables. Without them this step is skipped. See docs/WINDOWS-STORE.md.
-      - name: Package for Microsoft Store (MSIX)
-        if: ${{ matrix.arch == 'x64' && vars.MSIX_IDENTITY_NAME != '' && vars.MSIX_PUBLISHER != '' && vars.MSIX_PUBLISHER_DISPLAY_NAME != '' }}
-        shell: pwsh
-        working-directory: khmer_calendar
-        env:
-          MSIX_IDENTITY_NAME: ${{ vars.MSIX_IDENTITY_NAME }}
-          MSIX_PUBLISHER: ${{ vars.MSIX_PUBLISHER }}
-          MSIX_PUBLISHER_DISPLAY_NAME: ${{ vars.MSIX_PUBLISHER_DISPLAY_NAME }}
-        run: ../scripts/package-msix.ps1 -IdentityName $env:MSIX_IDENTITY_NAME -Publisher $env:MSIX_PUBLISHER -PublisherDisplayName $env:MSIX_PUBLISHER_DISPLAY_NAME -OutDir ${{ runner.temp }}\msix
-      - name: MSIX skipped (no Store identity yet)
-        if: ${{ matrix.arch == 'x64' && (vars.MSIX_IDENTITY_NAME == '' || vars.MSIX_PUBLISHER == '' || vars.MSIX_PUBLISHER_DISPLAY_NAME == '') }}
-        shell: pwsh
-        run: Write-Host "::notice title=MSIX skipped::Set repository variables MSIX_IDENTITY_NAME, MSIX_PUBLISHER, MSIX_PUBLISHER_DISPLAY_NAME (see docs/WINDOWS-STORE.md)"
-      - uses: actions/upload-artifact@v4
-        if: ${{ matrix.arch == 'x64' && vars.MSIX_IDENTITY_NAME != '' && vars.MSIX_PUBLISHER != '' && vars.MSIX_PUBLISHER_DISPLAY_NAME != '' }}
+
+  installers:
+    # Setup wizards (Inno Setup, runs on any x64 host) built from the finished, signed portable builds,
+    # so each installer carries exactly what its zip carries: x64, arm64 and universal (both builds in one setup).
+    name: windows-installers
+    needs: windows
+    if: ${{ !cancelled() && needs.windows.result == 'success' }}
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
         with:
-          name: windows-msix
-          path: ${{ runner.temp }}\msix\*.msix
-          if-no-files-found: error
+          pattern: windows-*
+          path: parts
+      - name: Unpack the portable builds
+        shell: pwsh
+        run: |
+          foreach ($a in 'x64', 'arm64') {
+            $zip = "parts\windows-$a\KhmerCalendar-windows-$a.zip"
+            if (Test-Path $zip) { Expand-Archive $zip "build\$a" } else { Write-Host "::warning::$zip missing - no $a installer" }
+          }
+      - name: Build the setup wizards
+        shell: pwsh
+        run: |
+          $v = ((Select-String -Path khmer_calendar\pubspec.yaml -Pattern '^version:\s*(\S+)').Matches[0].Groups[1].Value) -replace '\+.*$',''
+          ./scripts/build-installer.ps1 -SourceDir build\x64 -OutDir installer-out -Version $v -Arch x64
+          if (Test-Path build\arm64) {
+            ./scripts/build-installer.ps1 -SourceDir build\arm64 -OutDir installer-out -Version $v -Arch arm64
+            ./scripts/build-installer.ps1 -SourceDir build\x64 -Arm64Dir build\arm64 -OutDir installer-out -Version $v -Arch universal
+          }
+      - name: Sign the installers (Authenticode)
+        shell: pwsh
+        env:
+          PFX_B64: ${{ secrets.DESKTOP_SIGN_PFX_BASE64 }}
+          PFX_PASS: ${{ secrets.DESKTOP_SIGN_PASSWORD }}
+        run: ./scripts/sign-windows.ps1 -Dir installer-out
+      # This runner is x64: it can install and uninstall the x64 and universal wizards (the universal one picks its x64
+      # build here). The arm64 wizard only runs on Arm64 Windows, so it is built and signed but not installed in CI.
+      - name: Test the x64 installer (silent install, shortcut, uninstall)
+        shell: pwsh
+        run: ./scripts/test-installer.ps1 -Setup installer-out\KhmerCalendar-windows-x64-setup.exe
+      - name: Test the universal installer (installs the x64 build on this runner)
+        if: hashFiles('installer-out/KhmerCalendar-windows-universal-setup.exe') != ''
+        shell: pwsh
+        run: ./scripts/test-installer.ps1 -Setup installer-out\KhmerCalendar-windows-universal-setup.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-installers
+          path: installer-out/KhmerCalendar-windows-*-setup.exe

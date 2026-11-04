@@ -1,0 +1,17 @@
+PRIVACY
+
+Khmer Calendar does not collect, store or sell your personal data.
+
+- No accounts, no advertising, no analytics and no crash-reporting services.
+- Your settings, events and reminders stay on this computer. Nothing is sent to the author.
+- Your location is only used if you ask for it, to find the nearest city from a list built into
+  the app. Your coordinates are not saved or sent anywhere.
+- The app contacts a few outside services: Open-Meteo (weather), Wikimedia (city photos),
+  OpenWeather (weather icons) and GitHub (only when you tap "check for updates"). Like any internet
+  request, they can see your IP address.
+- If you turn on "start with Windows", the app adds itself to your Windows start-up list. Uninstalling
+  removes the app; you can also turn this off in Windows Settings > Apps > Startup.
+
+The full policy is published at:
+https://github.com/mounsokdara/Khmer-Calendar/blob/main/PRIVACY.md
+and is also available in the app (Settings > Privacy, or About) and in the Start menu.

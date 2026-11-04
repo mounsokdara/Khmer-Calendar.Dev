@@ -14,7 +14,7 @@ on:
       - ".github/workflows/fdroid-check.yml"
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: fdroid-check
@@ -49,14 +49,3 @@ jobs:
           code=$?
           cat /tmp/report.txt
           exit $code
-      - name: Publish scan report (ci-reports/ on main)
-        if: always()
-        run: |
-          git config user.name ci && git config user.email ci@users.noreply.github.com
-          git fetch -q origin main
-          git checkout -q -B main origin/main
-          mkdir -p ci-reports
-          cp /tmp/report.txt ci-reports/fdroid-report.txt 2>/dev/null || echo "no report produced" > ci-reports/fdroid-report.txt
-          git add ci-reports
-          git commit -q -m "ci: F-Droid check report ${GITHUB_SHA::7} [skip ci]" || exit 0
-          for i in 1 2 3; do git push -q origin main && break; git pull -q --rebase origin main; done
