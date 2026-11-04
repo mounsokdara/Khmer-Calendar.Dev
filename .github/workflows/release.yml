@@ -191,9 +191,44 @@ jobs:
 
           NOTES_FILE=".github/release-body.md"
           echo "Publishing ${TAG} (target ${GITHUB_SHA})"
-          gh release delete "$TAG" --yes --cleanup-tag || true
-          gh release create "$TAG" \
-            release-files/* \
-            --target "$GITHUB_SHA" \
-            --title "Khmer Calendar $TAG" \
-            --notes-file "$NOTES_FILE"
+          # GitHub's API sometimes answers 5xx (e.g. "HTTP 502") on release calls.
+          # Retry each call with a growing delay instead of failing the whole job.
+          retry() {
+            local n=1 max=5
+            until "$@"; do
+              if [ "$n" -ge "$max" ]; then
+                echo "::error::giving up after ${max} attempts: $*" >&2
+                return 1
+              fi
+              echo "::warning::attempt ${n}/${max} failed (transient GitHub API error?): $*" >&2
+              sleep $((n * 20))
+              n=$((n + 1))
+            done
+          }
+          # Remove leftover drafts for this tag (e.g. a create that returned 502 but succeeded).
+          drop_drafts() {
+            local ids id
+            ids=$(gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
+              --jq ".[] | select(.draft == true and .tag_name == \"${TAG}\") | .id") || return 1
+            for id in $ids; do
+              gh api -X DELETE "repos/${GITHUB_REPOSITORY}/releases/${id}" || return 1
+            done
+          }
+          create_draft() {
+            drop_drafts || return 1
+            gh release create "$TAG" \
+              --draft \
+              --target "$GITHUB_SHA" \
+              --title "Khmer Calendar $TAG" \
+              --notes-file "$NOTES_FILE"
+          }
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            retry gh release delete "$TAG" --yes --cleanup-tag
+          fi
+          # Draft first, then upload the files one by one, then publish. A flaky call can
+          # no longer leave a half-published release behind.
+          retry create_draft
+          for f in release-files/*; do
+            retry gh release upload "$TAG" "$f" --clobber
+          done
+          retry gh release edit "$TAG" --draft=false
