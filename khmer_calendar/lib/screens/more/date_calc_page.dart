@@ -50,8 +50,6 @@ class _DateCalcPageState extends State<DateCalcPage> {
         final years = days.abs() ~/ 365;
         final months = (days.abs() % 365) ~/ 30;
         final rest = days.abs() - years * 365 - months * 30;
-        final lunarFrom = lunarOf(a);
-        final lunarTo = lunarOf(b);
         final shifted = isoOf(addDays(a, int.tryParse(shift) ?? 0));
         final shiftedLunar = lunarOf(fromIso(shifted));
         final cs = Theme.of(context).colorScheme;
