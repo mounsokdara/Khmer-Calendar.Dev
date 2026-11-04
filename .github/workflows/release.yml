@@ -34,6 +34,8 @@ jobs:
           - { arch: arm64, runner: ubuntu-24.04-arm, experimental: true }
     steps:
       - uses: actions/checkout@v4
+      - name: Apply version.txt
+        run: bash scripts/set-version.sh --apply
       - uses: subosito/flutter-action@v2
         if: matrix.arch == 'x64'
         with:
@@ -90,6 +92,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - name: Apply version.txt
+        run: bash scripts/set-version.sh --apply
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: "3.47.4"
@@ -167,7 +171,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          VERSION=$(grep -m1 '^version:' khmer_calendar/pubspec.yaml | sed 's/^version:[[:space:]]*//; s/+.*//')
+          # Prefer version.txt (single source of truth); fall back to pubspec.
+          if [ -f version.txt ]; then
+            VERSION=$(sed -n 's/^versionName=//p' version.txt | head -1 | tr -d '\r')
+          else
+            VERSION=$(grep -m1 '^version:' khmer_calendar/pubspec.yaml | sed 's/^version:[[:space:]]*//; s/+.*//')
+          fi
           TAG="v${VERSION}"
           NOTES_FILE=".github/release-body.md"
           echo "Publishing ${TAG}"

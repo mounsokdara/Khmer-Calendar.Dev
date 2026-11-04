@@ -17,6 +17,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+      - name: Apply version.txt
+        run: bash scripts/set-version.sh --apply
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: "3.47.4"

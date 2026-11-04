@@ -25,6 +25,9 @@ jobs:
           - { arch: arm64, runner: windows-11-arm, experimental: true }
     steps:
       - uses: actions/checkout@v4
+      - name: Apply version.txt
+        shell: bash
+        run: bash scripts/set-version.sh --apply
       - uses: subosito/flutter-action@v2
         if: matrix.arch == 'x64'
         with:
@@ -32,7 +35,7 @@ jobs:
           channel: stable
           cache: true
       # Flutter builds for the architecture of the machine its own SDK runs on (there is no --target-platform for
-# Windows), so the arm64 job needs a native arm64 SDK. No arm64 archive is published, so use git (the tool
+      # Windows), so the arm64 job needs a native arm64 SDK. No arm64 archive is published, so use git (the tool
       # downloads the native arm64 Dart SDK itself).
       - name: Flutter SDK 3.47.4 from git (arm64)
         if: matrix.arch == 'arm64'
@@ -63,7 +66,6 @@ jobs:
       - name: Verify package (runtime DLLs + icon)
         shell: pwsh
         run: ./scripts/verify-windows.ps1 -Zip KhmerCalendar-windows-${{ matrix.arch }}.zip
-      # Setup wizard (Inno Setup): same signed files + runtime as the portable zip.
       - uses: actions/upload-artifact@v4
         with:
           name: windows-${{ matrix.arch }}
@@ -71,8 +73,6 @@ jobs:
           path: KhmerCalendar-windows-${{ matrix.arch }}.zip
 
   installers:
-    # Setup wizards (Inno Setup, runs on any x64 host) built from the finished, signed portable builds,
-    # so each installer carries exactly what its zip carries: x64, arm64 and universal (both builds in one setup).
     name: windows-installers
     needs: windows
     if: ${{ !cancelled() && needs.windows.result == 'success' }}
@@ -80,6 +80,9 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - name: Apply version.txt
+        shell: bash
+        run: bash scripts/set-version.sh --apply
       - uses: actions/download-artifact@v4
         with:
           pattern: windows-*
@@ -106,8 +109,6 @@ jobs:
           PFX_B64: ${{ secrets.DESKTOP_SIGN_PFX_BASE64 }}
           PFX_PASS: ${{ secrets.DESKTOP_SIGN_PASSWORD }}
         run: ./scripts/sign-windows.ps1 -Dir installer-out
-      # This runner is x64: it can install and uninstall the x64 and universal wizards (the universal one picks its x64
-      # build here). The arm64 wizard only runs on Arm64 Windows, so it is built and signed but not installed in CI.
       - name: Test the x64 installer (silent install, shortcut, uninstall)
         shell: pwsh
         run: ./scripts/test-installer.ps1 -Setup installer-out\KhmerCalendar-windows-x64-setup.exe

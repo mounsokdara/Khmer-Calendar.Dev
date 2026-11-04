@@ -31,6 +31,8 @@ jobs:
           - { name: universal, target: "android-arm,android-arm64,android-x64", mode: release, split: false, out: app-release.apk,            experimental: false }
     steps:
       - uses: actions/checkout@v4
+      - name: Apply version.txt
+        run: bash scripts/set-version.sh --apply
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -49,7 +51,7 @@ jobs:
       - run: flutter pub get
         working-directory: khmer_calendar
       # --split-debug-info strips debug symbols from libapp.so; symbols are kept as an artifact.
-      # No --build-number: the version code is the one in pubspec.yaml.
+      # No --build-number: the version code is the one in pubspec.yaml (from version.txt).
       - run: flutter build apk --${{ matrix.mode }} ${{ matrix.split && '--split-per-abi' || '' }} --target-platform ${{ matrix.target }} ${{ matrix.mode == 'release' && '--split-debug-info=build/symbols' || '' }}
         working-directory: khmer_calendar
         env:
