@@ -15,8 +15,9 @@ String _when(DateTime utc) {
   return '${d.year}-${two(d.month)}-${two(d.day)} ${two(d.hour)}:${two(d.minute)}';
 }
 
-String _describe(DevBuild b) {
+String _describe(UpdateBuild b) {
   final parts = <String>[
+    'v${b.versionName}',
     if (b.sha.isNotEmpty) '#${b.sha}',
     _when(b.builtAt),
     if (b.size > 0) _mb(b.size),
@@ -39,9 +40,9 @@ Future<void> _message(BuildContext context, Lang lang, String title, String body
   );
 }
 
-/// "Check for updates" for dev builds: finds the newest APK of the `dev-latest` pre-release, downloads it inside
-/// the app and opens the system installer. No browser, no GitHub page.
-Future<void> runDevUpdateCheck(BuildContext context, Lang lang) async {
+/// "Check for updates": finds the release tag that matches version.txt, downloads the package for this
+/// device inside the app and opens the system installer. No browser required.
+Future<void> runInAppUpdateCheck(BuildContext context, Lang lang) async {
   if (NetStatus.isOffline) {
     await _message(context, lang, _s(lang, 'ពិនិត្យកំណែថ្មី', 'Check for updates'), t(lang, 'downloadOffline'));
     return;
@@ -62,20 +63,19 @@ Future<void> runDevUpdateCheck(BuildContext context, Lang lang) async {
     ),
   );
 
-  DevBuild? build;
+  UpdateBuild? build;
   Object? error;
   try {
-    build = await fetchDevBuild();
+    build = await fetchUpdateBuild();
   } catch (e) {
     error = e;
   }
   if (context.mounted) Navigator.of(context).pop();
   if (!context.mounted) return;
 
-  final title = _s(lang, 'កំណែសាកល្បង', 'Dev build');
+  final title = _s(lang, 'កំណែថ្មី', 'Updates');
   if (error != null) {
-    await _message(context, lang, title, _s(lang, 'មិនអាចពិនិត្យកំណែថ្មីបានទេ។', 'Unable to check for updates.'),
-        extra: [_browserButton(lang)]);
+    await _message(context, lang, title, _s(lang, 'មិនអាចពិនិត្យកំណែថ្មីបានទេ។', 'Unable to check for updates.'));
     return;
   }
   if (build == null) {
@@ -83,8 +83,8 @@ Future<void> runDevUpdateCheck(BuildContext context, Lang lang) async {
       context,
       lang,
       title,
-      _s(lang, 'មិនទាន់មានកំណែសាកល្បងសម្រាប់ឧបករណ៍របស់អ្នកទេ។ ប្រហែលកំពុងបង្កើត សូមព្យាយាមម្តងទៀតបន្តិចទៀត។',
-          'No dev build for your device yet. It may still be building, try again in a few minutes.'),
+      _s(lang, 'មិនទាន់មានកំណែសម្រាប់ឧបករណ៍របស់អ្នកទេ។ ប្រហែលកំពុងបង្កើត សូមព្យាយាមម្តងទៀតបន្តិចទៀត។',
+          'No build for your device yet. It may still be publishing, try again in a few minutes.'),
     );
     return;
   }
@@ -93,11 +93,11 @@ Future<void> runDevUpdateCheck(BuildContext context, Lang lang) async {
   final go = await showDialog<bool>(
     context: context,
     builder: (d) => AlertDialog(
-      title: Text(found.isNewer ? _s(lang, 'មានកំណែសាកល្បងថ្មី', 'Dev build available') : title),
+      title: Text(found.isNewer ? _s(lang, 'មានកំណែថ្មី', 'Update available') : title),
       content: Text(
         found.isNewer
             ? _describe(found)
-            : '${_s(lang, 'អ្នកកំពុងប្រើកំណែសាកល្បងថ្មីបំផុត។', 'You are on the latest dev build.')}\n\n${_describe(found)}',
+            : '${_s(lang, 'អ្នកកំពុងប្រើកំណែថ្មីបំផុត។', 'You are on the latest version.')}\n\n${_describe(found)}',
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(d, false), child: Text(_s(lang, 'បិទ', 'Close'))),
@@ -112,12 +112,12 @@ Future<void> runDevUpdateCheck(BuildContext context, Lang lang) async {
   await _downloadAndInstall(context, lang, found);
 }
 
-Widget _browserButton(Lang lang) => TextButton(
-      onPressed: () => launchUrl(Uri.parse(devReleasePageUrl), mode: LaunchMode.externalApplication),
+Widget _browserButton(Lang lang, String versionName) => TextButton(
+      onPressed: () => launchUrl(Uri.parse(updateReleasePageUrl(versionName)), mode: LaunchMode.externalApplication),
       child: Text(_s(lang, 'បើកក្នុងកម្មវិធីរុករក', 'Open in browser')),
     );
 
-Future<void> _downloadAndInstall(BuildContext context, Lang lang, DevBuild build) async {
+Future<void> _downloadAndInstall(BuildContext context, Lang lang, UpdateBuild build) async {
   final progress = ValueNotifier<double?>(null);
   var cancelled = false;
 
@@ -153,12 +153,12 @@ Future<void> _downloadAndInstall(BuildContext context, Lang lang, DevBuild build
   String? path;
   Object? error;
   try {
-    path = await downloadDevBuild(
+    path = await downloadUpdateBuild(
       build,
       (got, total) => progress.value = total > 0 ? got / total : null,
       isCancelled: () => cancelled,
     );
-  } on DevUpdateCancelled {
+  } on UpdateCancelled {
     progress.dispose();
     return; // the dialog was already closed by Cancel
   } catch (e) {
@@ -174,22 +174,22 @@ Future<void> _downloadAndInstall(BuildContext context, Lang lang, DevBuild build
     await _message(
       context,
       lang,
-      _s(lang, 'កំណែសាកល្បង', 'Dev build'),
+      _s(lang, 'កំណែថ្មី', 'Updates'),
       _s(lang, 'ការទាញយកមិនបានសម្រេច។ សូមព្យាយាមម្តងទៀត។', 'The download did not finish. Please try again.'),
-      extra: [_browserButton(lang)],
+      extra: [_browserButton(lang, build.versionName)],
     );
     return;
   }
   await _install(context, lang, path, build);
 }
 
-Future<void> _install(BuildContext context, Lang lang, String path, DevBuild build) async {
-  final result = await installDevBuild(path, build);
+Future<void> _install(BuildContext context, Lang lang, String path, UpdateBuild build) async {
+  final result = await installUpdateBuild(path, build);
   if (!context.mounted) return;
 
-  if (result == DevInstallResult.started) {
+  if (result == UpdateInstallResult.started) {
     // Desktop: the updater is waiting for this app to quit; it swaps the files and starts the new version.
-    if (devUpdateRestartsApp) {
+    if (updateRestartsApp) {
       showDialog<void>(
         context: context,
         barrierDismissible: false,
@@ -204,24 +204,24 @@ Future<void> _install(BuildContext context, Lang lang, String path, DevBuild bui
           ),
         ),
       );
-      await finishDevInstall();
+      await finishUpdateInstall();
     }
     return;
   }
 
-  if (result == DevInstallResult.notWritable) {
+  if (result == UpdateInstallResult.notWritable) {
     await _message(
       context,
       lang,
-      _s(lang, 'កំណែសាកល្បង', 'Dev build'),
+      _s(lang, 'កំណែថ្មី', 'Updates'),
       _s(lang, 'មិនអាចសរសេរក្នុងថតកម្មវិធីបានទេ (ឧទាហរណ៍ Program Files)។ សូមផ្លាស់ទីកម្មវិធីទៅថតផ្សេង ឬធ្វើបច្ចុប្បន្នភាពដោយដៃ។',
           'The app folder is read-only (for example Program Files). Move the app to a folder you can write to, or update manually.'),
-      extra: [_browserButton(lang)],
+      extra: [_browserButton(lang, build.versionName)],
     );
     return;
   }
 
-  if (result == DevInstallResult.needsPermission) {
+  if (result == UpdateInstallResult.needsPermission) {
     final retry = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -245,8 +245,8 @@ Future<void> _install(BuildContext context, Lang lang, String path, DevBuild bui
   await _message(
     context,
     lang,
-    _s(lang, 'កំណែសាកល្បង', 'Dev build'),
+    _s(lang, 'កំណែថ្មី', 'Updates'),
     _s(lang, 'មិនអាចបើកកម្មវិធីដំឡើងបានទេ។', 'Could not open the installer.'),
-    extra: [_browserButton(lang)],
+    extra: [_browserButton(lang, build.versionName)],
   );
 }

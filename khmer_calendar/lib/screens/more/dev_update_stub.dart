@@ -1,17 +1,17 @@
 import 'dev_update_types.dart';
 
 /// Web and platforms without an in-app installer.
-const bool devUpdateSupported = false;
+const bool inAppUpdateSupported = false;
 
-Future<DevBuild?> fetchDevBuild() async => null;
+Future<UpdateBuild?> fetchUpdateBuild() async => null;
 
-Future<String> downloadDevBuild(DevBuild build, void Function(int received, int total) onProgress,
+Future<String> downloadUpdateBuild(UpdateBuild build, void Function(int received, int total) onProgress,
         {bool Function()? isCancelled}) async =>
-    throw const DevUpdateException('Not supported on this platform');
+    throw const UpdateException('Not supported on this platform');
 
-Future<DevInstallResult> installDevBuild(String path, DevBuild build) async => DevInstallResult.failed;
+Future<UpdateInstallResult> installUpdateBuild(String path, UpdateBuild build) async => UpdateInstallResult.failed;
 
 /// True when installing closes the app and the updater restarts it (desktop).
-const bool devUpdateRestartsApp = false;
+const bool updateRestartsApp = false;
 
-Future<void> finishDevInstall() async {}
+Future<void> finishUpdateInstall() async {}

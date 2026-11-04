@@ -1,12 +1,17 @@
-/// Repo + pre-release the dev builds are published to by `.github/workflows/android.yml`
-/// (override with `--dart-define=DEV_UPDATE_REPO=owner/name` when testing a fork).
-const devUpdateRepo = String.fromEnvironment('DEV_UPDATE_REPO', defaultValue: 'mounsokdara/Khmer-Calendar.Dev');
-const devUpdateTag = 'dev-latest';
-const devReleasePageUrl = 'https://github.com/$devUpdateRepo/releases/tag/$devUpdateTag';
+/// Repo the in-app updater reads from (override with
+/// `--dart-define=UPDATE_REPO=owner/name` when testing a fork).
+const updateRepo = String.fromEnvironment('UPDATE_REPO', defaultValue: 'mounsokdara/Khmer-Calendar.Dev');
 
-/// One downloadable dev build, already narrowed down to the package that fits this device.
-class DevBuild {
-  const DevBuild({
+/// version.txt in that repo is the single source of truth for the latest version name.
+const updateVersionFileUrl = 'https://raw.githubusercontent.com/$updateRepo/main/version.txt';
+
+String updateReleasePageUrl(String versionName) =>
+    'https://github.com/$updateRepo/releases/tag/v$versionName';
+
+/// One downloadable build, already narrowed down to the package that fits this device.
+class UpdateBuild {
+  const UpdateBuild({
+    required this.versionName,
     required this.package,
     required this.assetName,
     required this.url,
@@ -18,6 +23,9 @@ class DevBuild {
     this.updaterUrl = '',
   });
 
+  /// From the release tag / version.txt, e.g. `1.0.5`.
+  final String versionName;
+
   /// Android: `arm64`, `arm32`, `x64`, `arm32_64` or `universal`. Desktop: `x64`, `arm64` (macOS also `x86_64`).
   final String package;
   final String assetName;
@@ -26,22 +34,22 @@ class DevBuild {
   /// Bytes (0 when GitHub did not say).
   final int size;
 
-  /// When the asset finished uploading, i.e. when this build was made.
+  /// When the asset finished uploading.
   final DateTime builtAt;
 
   /// Short commit id taken from the release title, `''` when it cannot be read.
   final String sha;
 
-  /// True when this build was made after the installed one.
+  /// True when this build is newer than what is installed.
   final bool isNewer;
 
-  /// Desktop only: the small updater program (update.exe on Windows) that swaps the files after the app quits.
+  /// Desktop only: the small updater program that swaps the files after the app quits.
   final String updaterName;
   final String updaterUrl;
 }
 
-enum DevInstallResult {
-  /// The system installer is on screen.
+enum UpdateInstallResult {
+  /// The system installer is on screen (or the desktop updater was started).
   started,
 
   /// "Install unknown apps" has to be allowed for this app first (its settings page was opened).
@@ -52,14 +60,14 @@ enum DevInstallResult {
   failed,
 }
 
-class DevUpdateException implements Exception {
-  const DevUpdateException(this.message);
+class UpdateException implements Exception {
+  const UpdateException(this.message);
   final String message;
   @override
   String toString() => message;
 }
 
 /// Raised when the person taps Cancel while a download runs.
-class DevUpdateCancelled implements Exception {
-  const DevUpdateCancelled();
+class UpdateCancelled implements Exception {
+  const UpdateCancelled();
 }
