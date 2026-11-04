@@ -5,7 +5,14 @@ on:
     branches: [main]
     paths-ignore:
       - "**/*.md"
+    tags:
+      - "v*"
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Optional tag to publish (e.g. v1.0.5). Leave empty to use version.txt / current SHA."
+        required: false
+        default: ""
 
 concurrency:
   group: release
@@ -171,15 +178,28 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          # Prefer version.txt (single source of truth); fall back to pubspec.
-          if [ -f version.txt ]; then
+
+          # Tag resolution order:
+          # 1) workflow_dispatch input "tag"
+          # 2) the tag that triggered this run (github.ref_type == tag)
+          # 3) version.txt -> v<versionName>
+          # 4) pubspec.yaml fallback
+          if [ -n "${{ inputs.tag }}" ]; then
+            TAG="${{ inputs.tag }}"
+            TAG="${TAG#v}"
+            TAG="v${TAG}"
+          elif [ "${{ github.ref_type }}" = "tag" ]; then
+            TAG="${{ github.ref_name }}"
+          elif [ -f version.txt ]; then
             VERSION=$(sed -n 's/^versionName=//p' version.txt | head -1 | tr -d '\r')
+            TAG="v${VERSION}"
           else
             VERSION=$(grep -m1 '^version:' khmer_calendar/pubspec.yaml | sed 's/^version:[[:space:]]*//; s/+.*//')
+            TAG="v${VERSION}"
           fi
-          TAG="v${VERSION}"
+
           NOTES_FILE=".github/release-body.md"
-          echo "Publishing ${TAG}"
+          echo "Publishing ${TAG} (target ${GITHUB_SHA})"
           gh release delete "$TAG" --yes --cleanup-tag || true
           gh release create "$TAG" \
             release-files/* \
