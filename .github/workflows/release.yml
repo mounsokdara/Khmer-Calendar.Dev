@@ -22,7 +22,6 @@ permissions:
 
 
 jobs:
-  # Per-platform build + sign lives in its own file (also runnable on its own).
   android:
     uses: ./.github/workflows/android.yml
     secrets: inherit
@@ -30,7 +29,6 @@ jobs:
   linux:
     name: linux-${{ matrix.arch }}
     runs-on: ${{ matrix.runner }}
-    # The arm64 job is best-effort so it can never block the x64 release.
     continue-on-error: ${{ matrix.experimental }}
     timeout-minutes: 45
     strategy:
@@ -49,8 +47,6 @@ jobs:
           flutter-version: "3.47.4"
           channel: stable
           cache: true
-      # No Linux arm64 SDK archive is published, so the arm64 job installs Flutter from git
-      # (the tool downloads the native arm64 Dart SDK itself).
       - name: Flutter SDK 3.47.4 from git (arm64)
         if: matrix.arch == 'arm64'
         run: |
@@ -65,6 +61,10 @@ jobs:
         working-directory: khmer_calendar
       - run: flutter build linux --release
         working-directory: khmer_calendar
+      - name: Build updater into the package folder
+        run: |
+          dart compile exe tools/updater/update.dart -o khmer_calendar/build/linux/${{ matrix.arch }}/release/bundle/update-linux-${{ matrix.arch }}
+          chmod +x khmer_calendar/build/linux/${{ matrix.arch }}/release/bundle/update-linux-${{ matrix.arch }}
       - name: Pack linux
         run: |
           tar -C khmer_calendar/build/linux/${{ matrix.arch }}/release/bundle -czf KhmerCalendar-linux-${{ matrix.arch }}.tar.gz .
@@ -131,10 +131,8 @@ jobs:
       - name: Stage files
         run: |
           mkdir -p release-files
-          # Every package job uploads its own file named KhmerCalendar-<os/arch>.<ext>; publish them as separate assets.
+          # Packages only (updater helpers live inside zip / tar.gz / dmg).
           find dist -type f -name 'KhmerCalendar-*' ! -name '*.idsig' -exec cp -t release-files {} +
-          # Universal packages: x64 + arm64 in one file, with a launcher that starts the build matching the CPU.
-          # (Windows and Linux have no fat binaries like macOS, so the two builds sit side by side.)
           if [ -f dist/windows-x64/KhmerCalendar-windows-x64.zip ] && [ -f dist/windows-arm64/KhmerCalendar-windows-arm64.zip ]; then
             mkdir -p u-win/x64 u-win/arm64
             unzip -q dist/windows-x64/KhmerCalendar-windows-x64.zip -d u-win/x64
@@ -158,7 +156,6 @@ jobs:
             tar -xzf dist/linux-arm64/KhmerCalendar-linux-arm64.tar.gz -C u-linux/arm64
             cat > u-linux/khmer-calendar.sh <<'LAUNCHER'
           #!/bin/sh
-          # Starts the build that matches this CPU (x64 or arm64).
           here="$(cd "$(dirname "$0")" && pwd)"
           case "$(uname -m)" in
             aarch64|arm64) dir=arm64 ;;
@@ -178,12 +175,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-
-          # Tag resolution order:
-          # 1) workflow_dispatch input "tag"
-          # 2) the tag that triggered this run (github.ref_type == tag)
-          # 3) version.txt -> v<versionName>
-          # 4) pubspec.yaml fallback
           if [ -n "${{ inputs.tag }}" ]; then
             TAG="${{ inputs.tag }}"
             TAG="${TAG#v}"
@@ -200,7 +191,6 @@ jobs:
 
           NOTES_FILE=".github/release-body.md"
           echo "Publishing ${TAG} (target ${GITHUB_SHA})"
-          # Specific tag only — never promote this release as GitHub "latest".
           gh release delete "$TAG" --yes --cleanup-tag || true
           gh release create "$TAG" \
             release-files/* \
