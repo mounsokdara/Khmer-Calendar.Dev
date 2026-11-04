@@ -13,7 +13,7 @@ import '../../theme.dart';
 import '../../web_refresh.dart';
 import '../../widgets/overlay_page.dart';
 import '../../widgets/segmented_list.dart';
-import 'dev_update.dart' show devUpdateSupported;
+import 'dev_update.dart' show inAppUpdateSupported;
 import 'dev_update_ui.dart';
 import 'update_checker.dart';
 
@@ -310,8 +310,8 @@ class AboutPage extends StatelessWidget {
                               _LinkRow(
                                 icon: Icons.system_update_outlined,
                                 title: km ? 'ពិនិត្យកំណែថ្មី' : 'Check for updates',
-                                subtitle: devUpdateSupported
-                                    ? (km ? 'ទាញយក និងដំឡើងកំណែសាកល្បងថ្មីបំផុត' : 'Download and install the latest dev build')
+                                subtitle: inAppUpdateSupported
+                                    ? (km ? 'ទាញយក និងដំឡើងកំណែថ្មីបំផុត' : 'Download and install the latest update')
                                     : (km ? 'ពិនិត្យកំណែថ្មីពី GitHub' : 'Check GitHub for a newer release'),
                                 external: false,
                                 onTap: () => _checkForUpdate(context, lang),
@@ -359,8 +359,8 @@ class AboutPage extends StatelessWidget {
 
 Future<void> _checkForUpdate(BuildContext context, Lang lang) async {
   if (!context.mounted) return;
-  // Dev builds (Android): download + install the newest `dev-latest` APK inside the app, no browser.
-  if (devUpdateSupported) return runDevUpdateCheck(context, lang);
+  // Android / desktop: download + install the package for the version.txt tag inside the app, no browser.
+  if (inAppUpdateSupported) return runInAppUpdateCheck(context, lang);
   showDialog<void>(
     context: context,
     barrierDismissible: false,
