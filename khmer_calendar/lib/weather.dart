@@ -163,6 +163,9 @@ const _wikiHeaders = {
 
 final _photoMem = <String, String?>{};
 
+/// Forgets the city photo addresses kept in memory; they are looked up again when needed.
+void clearWeatherMemoryCache() => _photoMem.clear();
+
 
 
 const _photoOverrides = <String, String>{};
