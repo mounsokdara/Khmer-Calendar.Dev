@@ -12,12 +12,13 @@ import '../../store.dart';
 import '../../theme.dart';
 import '../../web_refresh.dart';
 import '../../widgets/overlay_page.dart';
-import '../../widgets/segmented_list.dart';
+import '../../widgets/about_widgets.dart';
 import 'dev_update.dart' show inAppUpdateSupported;
 import 'dev_update_ui.dart';
 import 'update_checker.dart';
 
 const _githubProfile = 'https://github.com/mounsokdara';
+const _supportUrl = 'https://github.com/sponsors/mounsokdara';
 
 class _GithubProfile {
   const _GithubProfile({required this.name, required this.bio, required this.avatar});
@@ -44,186 +45,115 @@ Future<_GithubProfile?> _loadProfile() async {
   }
 }
 
+class _Hero extends StatelessWidget {
+  const _Hero({required this.km});
+  final bool km;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(color: cs.surfaceContainer, borderRadius: BorderRadius.circular(20)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Image.asset('assets/icons/icon-512.png', width: 64, height: 64, filterQuality: FilterQuality.medium),
+        ),
+        const SizedBox(height: 16),
+        Text(km ? 'ប្រតិទិនខ្មែរ' : 'Khmer Calendar', style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 6),
+        Text(
+          km ? 'ប្រតិទិនចន្ទគតិខ្មែរ សម្រាប់ទូរស័ព្ទ និងកុំព្យូទ័រ' : 'Khmer lunar calendar for phone and desktop.',
+          style: TextStyle(fontSize: 14, color: cs.onSurfaceVariant),
+        ),
+      ]),
+    );
+  }
+}
+
 class _AuthorCard extends StatelessWidget {
   const _AuthorCard({required this.km, required this.onOpen});
   final bool km;
   final VoidCallback onOpen;
 
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return FutureBuilder<_GithubProfile?>(
-      future: _loadProfile(),
-      builder: (context, snap) {
-        final p = snap.data;
-        final name = p?.name ?? appAuthor;
-        final letter = Container(
-          width: 64,
-          height: 64,
+  static const _avatarSize = 112.0;
+
+  Widget _avatar(ColorScheme cs, String? url, String letter) {
+    Widget fallback() => Container(
+          width: _avatarSize,
+          height: _avatarSize,
           alignment: Alignment.center,
           decoration: BoxDecoration(color: cs.primary, shape: BoxShape.circle),
-          child: Text(name.isEmpty ? '?' : name[0].toUpperCase(), style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: cs.onPrimary)),
+          child: Text(letter, style: TextStyle(fontSize: 44, fontWeight: FontWeight.w800, color: cs.onPrimary)),
         );
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                ClipOval(
-                  child: SizedBox(
-                    width: 64,
-                    height: 64,
-                    child: p == null
-                        ? letter
-                        : Image.network(p.avatar, fit: BoxFit.cover, errorBuilder: (_, _, _) => letter),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(name, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
-                      Text('@mounsokdara', style: TextStyle(color: cs.onSurfaceVariant)),
-                      if (p != null && p.bio.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(p.bio, style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
-                      ],
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: [
-                          _Label(km ? 'អ្នកអភិវឌ្ឍន៍ចម្បង' : 'Main developer', icon: Icons.code),
-                          _Label(km ? 'អ្នកអភិវឌ្ឍន៍ឯករាជ្យ' : 'Solo open source dev', icon: Icons.volunteer_activism_outlined),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: onOpen,
-              icon: const Icon(Icons.open_in_new, size: 18),
-              label: const Text('GitHub'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _Section extends StatelessWidget {
-  const _Section({required this.icon, required this.title, this.subtitle, required this.child});
-  final IconData icon;
-  final String title;
-  final String? subtitle;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: cs.surfaceContainer, borderRadius: BorderRadius.circular(20)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(color: cs.primaryContainer, borderRadius: BorderRadius.circular(14)),
-                child: Icon(icon, size: 22, color: cs.onPrimaryContainer),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-                    if (subtitle != null) Text(subtitle!, style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          child,
-        ],
+    if (url == null) return fallback();
+    return ClipOval(
+      child: Image.network(
+        url,
+        width: _avatarSize,
+        height: _avatarSize,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => fallback(),
+        loadingBuilder: (_, child, p) => p == null ? child : fallback(),
       ),
     );
   }
-}
-
-class _Label extends StatelessWidget {
-  const _Label(this.text, {this.icon});
-  final String text;
-  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: cs.secondaryContainer, borderRadius: BorderRadius.circular(100)),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[Icon(icon, size: 14, color: cs.onSecondaryContainer), const SizedBox(width: 5)],
-          Flexible(
-            child: Text(
-              text,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: cs.onSecondaryContainer),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LinkRow extends StatelessWidget {
-  const _LinkRow({required this.icon, required this.title, required this.subtitle, required this.onTap, this.external = true});
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-  final bool external;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return InkWell(
-      onTap: onTap,
+    final text = Theme.of(context).textTheme;
+    return Material(
+      color: cs.surfaceContainer,
+      borderRadius: BorderRadius.circular(28),
+      clipBehavior: Clip.antiAlias,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(color: cs.primaryContainer, shape: BoxShape.circle),
-              child: Icon(icon, color: cs.onPrimaryContainer),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-                  Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
-                ],
-              ),
-            ),
-            Icon(external ? Icons.open_in_new : Icons.chevron_right, size: 18, color: cs.onSurfaceVariant),
-          ],
+        padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+        child: SizedBox(
+          width: double.infinity,
+          child: FutureBuilder<_GithubProfile?>(
+            future: _loadProfile(),
+            builder: (context, snap) {
+              final p = snap.data;
+              final name = p?.name ?? appAuthor;
+              return Column(children: [
+                _avatar(cs, p?.avatar, name.isEmpty ? '?' : name[0].toUpperCase()),
+                const SizedBox(height: 16),
+                Text(name, textAlign: TextAlign.center, style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 4),
+                Text(
+                  km ? 'អ្នកអភិវឌ្ឍន៍ចម្បង' : 'Lead Developer',
+                  textAlign: TextAlign.center,
+                  style: text.titleMedium?.copyWith(fontWeight: FontWeight.w400),
+                ),
+                const SizedBox(height: 20),
+                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Flexible(
+                    child: FilledButton.icon(
+                      onPressed: () => launchUrl(Uri.parse(_supportUrl), mode: LaunchMode.externalApplication),
+                      icon: const Icon(Icons.volunteer_activism_outlined),
+                      label: Text(km ? 'គាំទ្រការងាររបស់ខ្ញុំ' : 'Support my work'),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(0, 52),
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        shape: const StadiumBorder(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  IconButton(
+                    tooltip: km ? 'ទំព័រ GitHub' : 'GitHub profile',
+                    iconSize: 28,
+                    onPressed: onOpen,
+                    icon: const Icon(Icons.code),
+                  ),
+                ]),
+              ]);
+            },
+          ),
         ),
       ),
     );
@@ -241,14 +171,12 @@ class AboutPage extends StatelessWidget {
       builder: (context, store) {
         final lang = store.lang;
         final km = lang == Lang.km;
-        final cs = Theme.of(context).colorScheme;
-        const gap = SizedBox(height: 16);
         final isFdroid = const bool.fromEnvironment('FDROID');
         void open(String url) => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
         return OverlayScaffold(
           title: t(lang, 'aboutTitle'),
           body: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
             children: [
               Center(
                 child: ConstrainedBox(
@@ -256,95 +184,65 @@ class AboutPage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(color: cs.surfaceContainer, borderRadius: BorderRadius.circular(20)),
-                        child: Row(
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(18),
-                              child: Image.asset('assets/icons/icon-512.png', width: 72, height: 72),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(t(lang, 'appName'), style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
-                                  Text(km ? 'ប្រតិទិនចន្ទគតិខ្មែរ' : 'Khmer lunar calendar', style: TextStyle(color: cs.onSurfaceVariant)),
-                                  const SizedBox(height: 8),
-                                  Wrap(
-                                    spacing: 6,
-                                    runSpacing: 6,
-                                    children: [
-                                      _Label('v$appVersion ($appBuildNumber)', icon: Icons.tag),
-                                      _Label(km ? 'ប្រភពបើកចំហ' : 'Open source', icon: Icons.code),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
+                      _Hero(km: km),
+                      const SizedBox(height: 12),
+                      AboutQuickActions(items: [
+                        QuickAction(
+                          icon: Icons.history,
+                          label: km ? 'កំណត់ត្រាការផ្លាស់ប្តូរ' : 'Changelog',
+                          onTap: () => context.push('/changelog'),
+                        ),
+                        QuickAction(icon: Icons.code, label: 'GitHub', onTap: () => open(appSourceUrl)),
+                        // F-Droid builds (--dart-define=FDROID=true) update through F-Droid, not GitHub.
+                        if (!isFdroid)
+                          QuickAction(
+                            icon: Icons.system_update_outlined,
+                            label: km ? 'ពិនិត្យកំណែថ្មី' : 'Check For Update',
+                            onTap: () => _checkForUpdate(context, lang),
+                          ),
+                        QuickAction(
+                          icon: Icons.bug_report_outlined,
+                          label: km ? 'បញ្ហា' : 'Issues',
+                          onTap: () => open('$appSourceUrl/issues'),
+                        ),
+                      ]),
+                      const SizedBox(height: 20),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 16, bottom: 8),
+                        child: Text(
+                          km ? 'អ្នកបង្កើត' : 'Author',
+                          style: Theme.of(context).textTheme.titleMedium,
                         ),
                       ),
-                      gap,
-                      _Section(
-                        icon: Icons.person_outline,
-                        title: t(lang, 'createdBy'),
-                        child: _AuthorCard(km: km, onOpen: () => open(_githubProfile)),
-                      ),
-                      gap,
-                      _Section(
-                        icon: Icons.apps,
-                        title: km ? 'កម្មវិធីនេះ' : 'This app',
-                        subtitle: km ? 'កូដ គេហទំព័រ និងកំណែ' : 'Source, website and updates',
-                        child: SegmentedGroup(
-                          padding: EdgeInsets.zero,
-                          filled: false,
-                          children: [
-                            _LinkRow(icon: Icons.code, title: t(lang, 'sourceCode'), subtitle: appSourceUrl, onTap: () => open(appSourceUrl)),
-                            _LinkRow(icon: Icons.language, title: t(lang, 'website'), subtitle: appWebsiteUrl, onTap: () => open(appWebsiteUrl)),
-                            // F-Droid builds (--dart-define=FDROID=true) update through F-Droid, not GitHub.
-                            if (!isFdroid)
-                              _LinkRow(
-                                icon: Icons.system_update_outlined,
-                                title: km ? 'ពិនិត្យកំណែថ្មី' : 'Check for updates',
-                                subtitle: inAppUpdateSupported
-                                    ? (km ? 'ទាញយក និងដំឡើងកំណែថ្មីបំផុត' : 'Download and install the latest update')
-                                    : (km ? 'ពិនិត្យកំណែថ្មីពី GitHub' : 'Check GitHub for a newer release'),
-                                external: false,
-                                onTap: () => _checkForUpdate(context, lang),
-                              ),
-                          ],
+                      _AuthorCard(km: km, onOpen: () => open(_githubProfile)),
+                      const SizedBox(height: 12),
+                      AboutGroup(items: [
+                        AboutItem(
+                          icon: Icons.info_outline,
+                          title: km ? 'កំណែ' : 'Version',
+                          subtitle: 'v$appVersion ($appBuildNumber)',
+                          chevron: false,
                         ),
-                      ),
-                      gap,
-                      _Section(
-                        icon: Icons.gavel_outlined,
-                        title: km ? 'ច្បាប់' : 'Legal',
-                        subtitle: km ? 'អាជ្ញាបណ្ណ និងឯកជនភាព' : 'Licenses and privacy',
-                        child: SegmentedGroup(
-                          padding: EdgeInsets.zero,
-                          filled: false,
-                          children: [
-                            _LinkRow(
-                              icon: Icons.description_outlined,
-                              title: t(lang, 'openSourceLicense'),
-                              subtitle: t(lang, 'mitLicense'),
-                              external: false,
-                              onTap: () => context.push('/license'),
-                            ),
-                            _LinkRow(
-                              icon: Icons.privacy_tip_outlined,
-                              title: km ? 'គោលការណ៍ឯកជនភាព' : 'Privacy policy',
-                              subtitle: km ? 'ទិន្នន័យអ្វីដែលកម្មវិធីប្រើ' : 'What data the app uses',
-                              external: false,
-                              onTap: () => context.push('/privacy-policy'),
-                            ),
-                          ],
+                        AboutItem(
+                          icon: Icons.language,
+                          title: t(lang, 'website'),
+                          subtitle: appWebsiteUrl,
+                          link: true,
+                          onTap: () => open(appWebsiteUrl),
                         ),
-                      ),
+                        AboutItem(
+                          icon: Icons.description_outlined,
+                          title: t(lang, 'openSourceLicense'),
+                          subtitle: t(lang, 'mitLicense'),
+                          onTap: () => context.push('/license'),
+                        ),
+                        AboutItem(
+                          icon: Icons.privacy_tip_outlined,
+                          title: km ? 'គោលការណ៍ឯកជនភាព' : 'Privacy policy',
+                          subtitle: km ? 'ទិន្នន័យអ្វីដែលកម្មវិធីប្រើ' : 'What data the app uses',
+                          onTap: () => context.push('/privacy-policy'),
+                        ),
+                      ]),
                     ],
                   ),
                 ),

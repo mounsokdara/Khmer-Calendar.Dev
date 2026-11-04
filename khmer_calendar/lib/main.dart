@@ -14,6 +14,7 @@ import 'permissions.dart';
 import 'screens/events.dart';
 import 'screens/licenses.dart';
 import 'screens/more.dart';
+import 'screens/more/changelog_page.dart';
 import 'screens/more/privacy_policy_page.dart';
 import 'screens/calendar.dart';
 import 'screens/setup.dart';
@@ -115,6 +116,7 @@ class _KhmerCalendarAppState extends State<KhmerCalendarApp> {
         GoRoute(path: '/settings/privacy', builder: (_, _) => PrivacyPage(store: widget.store)),
         GoRoute(path: '/settings/clear', builder: (_, _) => ClearPage(store: widget.store)),
         GoRoute(path: '/about', builder: (_, _) => AboutPage(store: widget.store)),
+        GoRoute(path: '/changelog', builder: (_, _) => ChangelogPage(store: widget.store)),
         GoRoute(path: '/privacy-policy', builder: (_, _) => PrivacyPolicyPage(store: widget.store)),
         GoRoute(
           path: '/license',
