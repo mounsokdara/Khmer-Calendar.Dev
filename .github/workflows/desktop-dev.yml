@@ -1,14 +1,8 @@
-# Desktop dev builds for the in-app updater (About > Check for updates).
-# android.yml already refreshes the "dev-latest" pre-release with the Android APKs on every push to main; this file adds
-# the desktop packages and their updater programs to that same pre-release:
-#   KhmerCalendar-windows-{x64,arm64}.zip   + update-windows.exe
-#   KhmerCalendar-linux-{x64,arm64}.tar.gz  + update-linux-{x64,arm64}
-#   KhmerCalendar-macos-{arm64,x86_64,universal}.dmg + update-macos.sh
-# It does not touch android.yml, release.yml, windows.yml or macos.yml.
-# Dev builds are NOT signed with the release certificate: the Dev repo has no DESKTOP_SIGN_* secrets, and windows.yml /
-# macos.yml fail without them. Windows is left unsigned; macOS gets an ad-hoc signature (Apple Silicon refuses unsigned code).
-# The updater downloads over HTTP, so neither SmartScreen nor Gatekeeper quarantine applies to what it installs.
-# Delete this file to stop publishing desktop dev builds.
+# Desktop builds for the in-app updater (About > Check for updates).
+# Updater helpers are packed inside each platform package (not separate release assets):
+#   KhmerCalendar-windows-{x64,arm64}.zip   (contains update-windows.exe)
+#   KhmerCalendar-linux-{x64,arm64}.tar.gz  (contains update-linux-{x64,arm64})
+#   KhmerCalendar-macos-{arm64,x86_64,universal}.dmg (contains update-macos.sh next to the .app)
 name: Desktop dev
 
 on:
@@ -32,8 +26,6 @@ jobs:
   windows:
     name: windows-${{ matrix.arch }}
     runs-on: ${{ matrix.runner }}
-    # x64 only: `flutter build windows` has no --target-platform option in this Flutter version, so an arm64 package cannot be
-    # built. Windows on ARM runs the x64 build through emulation, and the in-app updater falls back to it.
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -58,14 +50,16 @@ jobs:
         run: |
           flutter build windows --release 2>&1 | Tee-Object -Variable log | Out-Host
           if ($LASTEXITCODE -ne 0) {
-            # The job log is hard to reach from outside, an annotation is not.
             $tail = (($log | Select-Object -Last 25) -join ' | ') -replace '[\r\n]+', ' '
             Write-Host "::error title=flutter build windows failed::$tail"
             exit 1
           }
-      - name: Bundle Visual C++ runtime (so it runs without the redistributable installed)
+      - name: Bundle Visual C++ runtime
         shell: pwsh
         run: ./scripts/bundle-vcruntime.ps1 -Dir khmer_calendar\build\windows\${{ matrix.arch }}\runner\Release -Arch ${{ matrix.arch }}
+      - name: Build updater into the package folder
+        shell: pwsh
+        run: dart compile exe tools/updater/update.dart -o khmer_calendar\build\windows\${{ matrix.arch }}\runner\Release\update-windows.exe
       - name: Pack windows
         shell: pwsh
         run: Compress-Archive -Path khmer_calendar\build\windows\${{ matrix.arch }}\runner\Release\* -DestinationPath KhmerCalendar-windows-${{ matrix.arch }}.zip
@@ -91,7 +85,7 @@ jobs:
         working-directory: khmer_calendar
       - run: flutter build macos --release
         working-directory: khmer_calendar
-      - name: Keep the universal app (tar keeps symlinks and permissions)
+      - name: Keep the universal app
         run: |
           APP=$(find khmer_calendar/build/macos -name "*.app" | head -1)
           tar -C "$(dirname "$APP")" -cf macos-app.tar "$(basename "$APP")"
@@ -116,15 +110,18 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: desktop-macos-app
-      - name: Thin (if needed), ad-hoc sign and pack
+      - name: Thin (if needed), ad-hoc sign and pack (.app + update-macos.sh)
         run: |
           mkdir app && tar -C app -xf macos-app.tar
           APP=$(find app -maxdepth 1 -name "*.app" | head -1)
           if [ "${{ matrix.arch }}" != "universal" ]; then bash scripts/thin-macos.sh "$APP" "${{ matrix.arch }}"; fi
-          # Ad-hoc signature ("-"): thinning breaks the old one, and Apple Silicon will not start unsigned code.
           codesign --force --deep --sign - "$APP"
           codesign --verify --deep --strict "$APP"
-          hdiutil create -volname "Khmer Calendar" -srcfolder "$APP" -ov -format UDZO "KhmerCalendar-macos-${{ matrix.arch }}.dmg"
+          mkdir dmgroot
+          mv "$APP" dmgroot/
+          cp tools/updater/update-macos.sh dmgroot/update-macos.sh
+          chmod +x dmgroot/update-macos.sh
+          hdiutil create -volname "Khmer Calendar" -srcfolder dmgroot -ov -format UDZO "KhmerCalendar-macos-${{ matrix.arch }}.dmg"
           ls -lh "KhmerCalendar-macos-${{ matrix.arch }}.dmg"
       - uses: actions/upload-artifact@v4
         with:
@@ -134,7 +131,6 @@ jobs:
   linux:
     name: linux-${{ matrix.arch }}
     runs-on: ${{ matrix.runner }}
-    # The arm64 leg is best-effort so it can never block the rest.
     continue-on-error: ${{ matrix.experimental }}
     timeout-minutes: 45
     strategy:
@@ -151,8 +147,6 @@ jobs:
           flutter-version: "3.47.4"
           channel: stable
           cache: true
-      # flutter-action cannot find an arm64 Linux SDK archive ("Unable to determine Flutter version ... architecture: arm64"),
-      # so on the ARM runner Flutter is checked out from git at the same release tag.
       - name: Flutter 3.47.4 (arm64, from git)
         if: matrix.arch == 'arm64'
         run: |
@@ -170,42 +164,22 @@ jobs:
         run: |
           set -o pipefail
           flutter build linux --release 2>&1 | tee "$RUNNER_TEMP/build.log" || {
-            # The job log is hard to reach from outside, an annotation is not.
             echo "::error title=flutter build linux failed::$(tail -n 25 "$RUNNER_TEMP/build.log" | tr '\n' '|')"
             exit 1
           }
+      - name: Build updater into the package folder
+        run: |
+          dart compile exe tools/updater/update.dart -o khmer_calendar/build/linux/${{ matrix.arch }}/release/bundle/update-linux-${{ matrix.arch }}
+          chmod +x khmer_calendar/build/linux/${{ matrix.arch }}/release/bundle/update-linux-${{ matrix.arch }}
       - name: Pack linux
         run: tar -C khmer_calendar/build/linux/${{ matrix.arch }}/release/bundle -czf KhmerCalendar-linux-${{ matrix.arch }}.tar.gz .
-      - name: Build the updater
-        run: dart compile exe tools/updater/update.dart -o update-linux-${{ matrix.arch }}
       - uses: actions/upload-artifact@v4
         with:
           name: desktop-linux-${{ matrix.arch }}
-          path: |
-            KhmerCalendar-linux-${{ matrix.arch }}.tar.gz
-            update-linux-${{ matrix.arch }}
-
-  updater-windows:
-    runs-on: windows-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: "3.47.4"
-          channel: stable
-          cache: true
-          architecture: x64
-      # One x64 updater serves x64 and arm64 Windows (arm64 runs it through emulation).
-      - run: dart compile exe tools/updater/update.dart -o update-windows.exe
-      - uses: actions/upload-artifact@v4
-        with:
-          name: desktop-updater-windows
-          path: update-windows.exe
+          path: KhmerCalendar-linux-${{ matrix.arch }}.tar.gz
 
   publish:
-    needs: [windows, macos-pack, linux, updater-windows]
-    # Publish whatever was built, even if a best-effort leg (arm64) failed.
+    needs: [windows, macos-pack, linux]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -214,26 +188,22 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: dist
-      - name: Wait for this commit's dev-latest pre-release (android.yml creates it)
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          for i in $(seq 1 90); do
-            T=$(gh release view dev-latest --repo "$GITHUB_REPOSITORY" --json targetCommitish -q .targetCommitish 2>/dev/null || true)
-            if [ "$T" = "$GITHUB_SHA" ]; then exit 0; fi
-            # Run by hand: android.yml did not run for this commit, use the release that exists.
-            if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ -n "$T" ]; then exit 0; fi
-            sleep 20
-          done
-          echo "::error::dev-latest for $GITHUB_SHA never appeared (android.yml creates it)"
-          exit 1
-      - name: Upload to dev-latest
+      - name: Upload packages only
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir out
-          find dist -type f \( -name 'KhmerCalendar-windows-*.zip' -o -name 'KhmerCalendar-linux-*.tar.gz' -o -name 'KhmerCalendar-macos-*.dmg' \
-            -o -name 'update-windows.exe' -o -name 'update-linux-*' \) -exec cp -t out {} +
-          cp tools/updater/update-macos.sh out/
+          find dist -type f \( -name 'KhmerCalendar-windows-*.zip' -o -name 'KhmerCalendar-linux-*.tar.gz' -o -name 'KhmerCalendar-macos-*.dmg' \) -exec cp -t out {} +
           ls -lh out
-          gh release upload dev-latest out/* --clobber --repo "$GITHUB_REPOSITORY"
+          # Prefer a version tag from version.txt when present; otherwise skip if no release yet.
+          if [ -f version.txt ]; then
+            VERSION=$(sed -n 's/^versionName=//p' version.txt | head -1 | tr -d '\r')
+            TAG="v${VERSION}"
+            if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              gh release upload "$TAG" out/* --clobber --repo "$GITHUB_REPOSITORY"
+            else
+              echo "::warning::release $TAG does not exist yet; desktop packages not uploaded"
+            fi
+          else
+            echo "::warning::no version.txt"
+          fi

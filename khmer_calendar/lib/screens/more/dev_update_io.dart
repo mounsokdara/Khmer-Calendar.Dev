@@ -55,6 +55,7 @@ String? _parseVersionName(String text) {
 
 /// Looks up the build for this device from the release tag that matches version.txt.
 /// Returns null when that release has no package for this device (or does not exist yet).
+/// Desktop packages ship the updater inside the archive (not as a separate release asset).
 Future<UpdateBuild?> fetchUpdateBuild() async {
   late String package;
   late String assetName;
@@ -67,8 +68,6 @@ Future<UpdateBuild?> fetchUpdateBuild() async {
     if (info == null) throw const UpdateException('Cannot read the installed version');
     final versionCode = (info['versionCode'] as num).toInt();
     installedAt = DateTime.fromMillisecondsSinceEpoch((info['installedAt'] as num).toInt(), isUtc: true);
-    // Same package type as the installed one: a different ABI split has another version code and could be
-    // refused as a downgrade. Unknown digit (e.g. a custom build): fall back to universal.
     package = _packageByDigit[versionCode % 10] ?? 'universal';
     assetName = 'KhmerCalendar-$package.apk';
   } else {
@@ -89,10 +88,9 @@ Future<UpdateBuild?> fetchUpdateBuild() async {
       assetName = 'KhmerCalendar-macos-$package.dmg';
       updaterName = 'update-macos.sh';
     }
-    installedAt = await _readStamp(); // null: unknown build (never updated by this updater)
+    installedAt = await _readStamp();
   }
 
-  // 1) version.txt -> versionName -> specific tag vX.Y.Z (not "latest", not "dev-latest")
   final verRes = await http
       .get(Uri.parse('$updateVersionFileUrl?cb=${DateTime.now().millisecondsSinceEpoch}'))
       .timeout(const Duration(seconds: 12));
@@ -104,7 +102,7 @@ Future<UpdateBuild?> fetchUpdateBuild() async {
   final res = await http
       .get(Uri.parse('https://api.github.com/repos/$updateRepo/releases/tags/$tag'), headers: _headers)
       .timeout(const Duration(seconds: 12));
-  if (res.statusCode == 404) return null; // tag / release not published yet
+  if (res.statusCode == 404) return null;
   if (res.statusCode != 200) throw UpdateException('GitHub answered ${res.statusCode}');
 
   final release = jsonDecode(res.body) as Map<String, dynamic>;
@@ -119,8 +117,6 @@ Future<UpdateBuild?> fetchUpdateBuild() async {
     asset = find(assetName);
   }
   if (asset == null) return null;
-  final updater = updaterName.isEmpty ? null : find(updaterName);
-  if (updaterName.isNotEmpty && updater == null) return null; // package without its updater: not installable yet
 
   final builtAt = DateTime.parse(asset['updated_at'] as String).toUtc();
   final sha = RegExp(r'\(([0-9a-fA-F]{7,40})\)').firstMatch('${release['name'] ?? ''}')?.group(1) ?? '';
@@ -136,13 +132,10 @@ Future<UpdateBuild?> fetchUpdateBuild() async {
     sha: sha,
     isNewer: newerByVersion || newerByTime,
     updaterName: updaterName,
-    updaterUrl: updater == null ? '' : updater['browser_download_url'] as String,
+    updaterUrl: '', // updater is inside the package file
   );
 }
 
-// ---------- desktop: which build is installed ----------
-
-/// The updater writes this file after a successful update (path is passed to it, see installUpdateBuild).
 Future<File> _stampFile() async => File('${(await getApplicationSupportDirectory()).path}${Platform.pathSeparator}updatebuild.json');
 
 Future<DateTime?> _readStamp() async {
@@ -155,8 +148,6 @@ Future<DateTime?> _readStamp() async {
     return null;
   }
 }
-
-// ---------- download ----------
 
 Future<void> _fetchTo(
   String url,
@@ -210,28 +201,63 @@ Future<Directory> _downloadDir() async {
   return Directory('${Directory.systemTemp.path}${Platform.pathSeparator}khmer_update_dl');
 }
 
-/// Downloads [build] (and, on desktop, its updater program) and returns the path of the package file.
+/// Pulls [updaterName] out of the downloaded package so install can run it before the archive is applied.
+Future<void> _extractUpdaterFromPackage(String archivePath, String updaterName) async {
+  if (updaterName.isEmpty) return;
+  final dir = File(archivePath).parent.path;
+  final sep = Platform.pathSeparator;
+  final out = File('$dir$sep$updaterName');
+  if (out.existsSync()) out.deleteSync();
+
+  if (Platform.isWindows) {
+    final tar = '${Platform.environment['SystemRoot'] ?? r'C:\Windows'}\System32\tar.exe';
+    final r = await Process.run(tar, ['-xf', archivePath, '-C', dir, updaterName]);
+    if (r.exitCode != 0 || !out.existsSync()) {
+      throw const UpdateException('Package is missing the updater');
+    }
+  } else if (Platform.isLinux) {
+    final r = await Process.run('tar', ['-xzf', archivePath, '-C', dir, './$updaterName', updaterName]);
+    if (r.exitCode != 0 || !out.existsSync()) {
+      throw const UpdateException('Package is missing the updater');
+    }
+    await Process.run('chmod', ['+x', out.path]);
+  } else if (Platform.isMacOS) {
+    final mnt = await Directory.systemTemp.createTemp('khmer_upd_mnt_');
+    try {
+      final attach = await Process.run('hdiutil', ['attach', '-nobrowse', '-readonly', '-mountpoint', mnt.path, archivePath]);
+      if (attach.exitCode != 0) throw const UpdateException('Could not open the disk image');
+      final src = File('${mnt.path}$sep$updaterName');
+      if (!src.existsSync()) throw const UpdateException('Package is missing the updater');
+      src.copySync(out.path);
+      await Process.run('chmod', ['+x', out.path]);
+    } finally {
+      await Process.run('hdiutil', ['detach', mnt.path, '-force']);
+      try {
+        mnt.deleteSync(recursive: true);
+      } catch (_) {}
+    }
+  }
+}
+
+/// Downloads [build] and, on desktop, extracts the updater from inside the package.
 Future<String> downloadUpdateBuild(
   UpdateBuild build,
   void Function(int received, int total) onProgress, {
   bool Function()? isCancelled,
 }) async {
   final dir = await _downloadDir();
-  if (dir.existsSync()) dir.deleteSync(recursive: true); // drop leftovers of earlier downloads
+  if (dir.existsSync()) dir.deleteSync(recursive: true);
   dir.createSync(recursive: true);
   final sep = Platform.pathSeparator;
 
-  if (build.updaterUrl.isNotEmpty) {
-    final updater = File('${dir.path}$sep${build.updaterName}');
-    await _fetchTo(build.updaterUrl, updater, 0, null, isCancelled);
-    if (!Platform.isWindows) await Process.run('chmod', ['+x', updater.path]);
-  }
   final target = File('${dir.path}$sep${build.assetName}');
   await _fetchTo(build.url, target, build.size, onProgress, isCancelled);
+
+  if (build.updaterName.isNotEmpty) {
+    await _extractUpdaterFromPackage(target.path, build.updaterName);
+  }
   return target.path;
 }
-
-// ---------- install ----------
 
 bool _writable(Directory d) {
   try {
@@ -244,10 +270,8 @@ bool _writable(Directory d) {
   }
 }
 
-/// Android: opens the system installer for the downloaded APK (it only installs when signed with the same key
-/// as the running app, so a tampered download is rejected by the system).
-/// Desktop: starts the updater program, which waits for this app to quit, swaps the files and restarts it.
-/// Call [finishUpdateInstall] after `started` on desktop to close the app.
+/// Android: opens the system installer for the downloaded APK.
+/// Desktop: starts the updater extracted from the package, which waits for this app to quit, swaps the files and restarts it.
 Future<UpdateInstallResult> installUpdateBuild(String path, UpdateBuild build) async {
   if (Platform.isAndroid) {
     try {
@@ -268,10 +292,9 @@ Future<UpdateInstallResult> installUpdateBuild(String path, UpdateBuild build) a
   try {
     final exePath = Platform.resolvedExecutable;
     final sep = Platform.pathSeparator;
-    final String target; // what the updater replaces: the app folder, or the .app bundle on macOS
+    final String target;
     final String exeName;
     if (Platform.isMacOS) {
-      // <X>.app/Contents/MacOS/<exe>  ->  <X>.app
       target = File(exePath).parent.parent.parent.path;
       exeName = '';
       if (!_writable(Directory(target).parent)) return UpdateInstallResult.notWritable;
@@ -301,7 +324,6 @@ Future<UpdateInstallResult> installUpdateBuild(String path, UpdateBuild build) a
   }
 }
 
-/// Desktop: closes the app so the updater can replace its files. Android: nothing to do.
 Future<void> finishUpdateInstall() async {
   if (!updateRestartsApp) return;
   await Future<void>.delayed(const Duration(milliseconds: 900));
