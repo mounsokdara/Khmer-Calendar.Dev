@@ -200,10 +200,10 @@ jobs:
 
           NOTES_FILE=".github/release-body.md"
           echo "Publishing ${TAG} (target ${GITHUB_SHA})"
+          # Specific tag only — never promote this release as GitHub "latest".
           gh release delete "$TAG" --yes --cleanup-tag || true
           gh release create "$TAG" \
             release-files/* \
             --target "$GITHUB_SHA" \
             --title "Khmer Calendar $TAG" \
-            --notes-file "$NOTES_FILE" \
-            --latest
+            --notes-file "$NOTES_FILE"
