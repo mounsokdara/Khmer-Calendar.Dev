@@ -94,7 +94,7 @@ Future<UpdateBuild?> fetchUpdateBuild() async {
       .get(Uri.parse('$updateVersionFileUrl?cb=${DateTime.now().millisecondsSinceEpoch}'))
       .timeout(const Duration(seconds: 12));
   if (verRes.statusCode != 200) throw UpdateException('version.txt answered ${verRes.statusCode}');
-  final versionName = _parseVersionName(text);
+  final versionName = _parseVersionName(verRes.body);
   if (versionName == null || versionName.isEmpty) throw const UpdateException('version.txt has no versionName');
 
   final tag = 'v$versionName';
