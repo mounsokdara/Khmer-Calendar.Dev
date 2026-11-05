@@ -3,6 +3,8 @@
 #   KhmerCalendar-windows-{x64,arm64}.zip  (contains update-windows.exe)
 #   KhmerCalendar-linux-{x64,arm64}.tar.gz (contains update-linux-{arch})
 #   KhmerCalendar-macos-{arm64,x86_64,universal}.dmg (contains update-macos.sh)
+# Also published on their own (download and run, the app does not need to be started):
+#   KhmerCalendar-Updater-windows-x64.exe, KhmerCalendar-Updater-linux-{x64,arm64}
 name: Desktop dev
 
 on:
@@ -60,6 +62,9 @@ jobs:
       - name: Build updater into the package folder
         shell: pwsh
         run: dart compile exe tools/updater/update.dart -o khmer_calendar\build\windows\${{ matrix.arch }}\runner\Release\update-windows.exe
+      - name: Standalone updater copy (separate release asset)
+        shell: pwsh
+        run: Copy-Item khmer_calendar\build\windows\${{ matrix.arch }}\runner\Release\update-windows.exe KhmerCalendar-Updater-windows-${{ matrix.arch }}.exe
       - name: Pack windows
         shell: pwsh
         run: Compress-Archive -Path khmer_calendar\build\windows\${{ matrix.arch }}\runner\Release\* -DestinationPath KhmerCalendar-windows-${{ matrix.arch }}.zip
@@ -70,6 +75,10 @@ jobs:
         with:
           name: desktop-windows-${{ matrix.arch }}
           path: KhmerCalendar-windows-${{ matrix.arch }}.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: updater-windows-${{ matrix.arch }}
+          path: KhmerCalendar-Updater-windows-${{ matrix.arch }}.exe
 
   macos-build:
     runs-on: macos-latest
@@ -171,12 +180,18 @@ jobs:
         run: |
           dart compile exe tools/updater/update.dart -o khmer_calendar/build/linux/${{ matrix.arch }}/release/bundle/update-linux-${{ matrix.arch }}
           chmod +x khmer_calendar/build/linux/${{ matrix.arch }}/release/bundle/update-linux-${{ matrix.arch }}
+      - name: Standalone updater copy (separate release asset)
+        run: cp khmer_calendar/build/linux/${{ matrix.arch }}/release/bundle/update-linux-${{ matrix.arch }} KhmerCalendar-Updater-linux-${{ matrix.arch }}
       - name: Pack linux
         run: tar -C khmer_calendar/build/linux/${{ matrix.arch }}/release/bundle -czf KhmerCalendar-linux-${{ matrix.arch }}.tar.gz .
       - uses: actions/upload-artifact@v4
         with:
           name: desktop-linux-${{ matrix.arch }}
           path: KhmerCalendar-linux-${{ matrix.arch }}.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: updater-linux-${{ matrix.arch }}
+          path: KhmerCalendar-Updater-linux-${{ matrix.arch }}
 
   publish:
     needs: [windows, macos-pack, linux]
@@ -188,7 +203,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: dist
-      - name: Upload packages only (updater is inside each archive)
+      - name: Upload packages and standalone updaters
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -196,7 +211,8 @@ jobs:
           find dist -type f \( \
             -name 'KhmerCalendar-windows-*.zip' -o \
             -name 'KhmerCalendar-linux-*.tar.gz' -o \
-            -name 'KhmerCalendar-macos-*.dmg' \
+            -name 'KhmerCalendar-macos-*.dmg' -o \
+            -name 'KhmerCalendar-Updater-*' \
           \) -exec cp -t out {} +
           ls -lh out
           if [ -f version.txt ]; then

@@ -27,6 +27,8 @@ flutter run -d chrome
 ## Dev builds: update inside the app
 In this dev repo every push to `main` publishes the Android APKs (`android.yml`) and the Windows, Linux and macOS packages (`desktop-dev.yml`) to the `dev-latest` pre-release, each with its updater. **About > Check for updates** downloads the right package for your device and installs it without opening GitHub: Android opens the system installer; on Windows (`update.exe`), Linux and macOS a small updater waits for the app to quit, swaps the files and restarts it. Source: `khmer_calendar/lib/screens/more/dev_update*.dart`, `tools/updater/`.
 
+**Update without opening the app:** download `KhmerCalendar-Updater-windows-x64.exe` (Windows) or `KhmerCalendar-Updater-linux-x64` / `-arm64` (Linux) from the release and run it. It finds the installed app (or asks for the folder, or use `--app-dir <folder>`), downloads the latest package, closes the app if it is running, updates it and starts it again. If another program is using the app files it tells you which one and lets you retry. Windows may show "Unknown publisher" because the file is not signed yet.
+
 ## Privacy
 [Privacy Policy](PRIVACY.md): no accounts, ads or analytics; your data stays on your device.
 

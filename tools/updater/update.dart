@@ -14,16 +14,27 @@
 //   update --pid 123 --app-dir <dir> --exe khmer_calendar[.exe] --archive <file>
 //          [--stamp <file> --built-at <iso time> --sha <commit>]
 //
+// Standalone mode (download KhmerCalendar-Updater-* from the release and run it, the app does not
+// need to be started): with no --pid/--archive it finds the installed app, downloads the latest
+// package itself, closes the app if it is running, updates it and starts it again.
+//   KhmerCalendar-Updater-windows-x64.exe [--app-dir <dir>]
+//
 // Plain Dart, no packages: `dart compile exe tools/updater/update.dart -o update-windows.exe`
 import 'dart:convert';
 import 'dart:io';
 
 final _sep = Platform.pathSeparator;
+
+const _repo = 'mounsokdara/Khmer-Calendar.Dev';
+const _userAgent = 'khmer-calendar-updater';
 final _log = File('${Directory.systemTemp.path}${_sep}khmer_update.log');
 
 void _say(String m) {
   try {
     _log.writeAsStringSync('${DateTime.now().toIso8601String()} $m\n', mode: FileMode.append);
+  } catch (_) {}
+  try {
+    stdout.writeln(m); // visible when the updater is started by hand (console window)
   } catch (_) {}
 }
 
@@ -296,33 +307,344 @@ Future<void> _start(String appDir, String exe) async {
   }
 }
 
+
+// ---------------------------------------------------------------- standalone mode
+
+/// Plain message box (or console line when no dialog tool exists).
+Future<void> _notify(String title, String message) async {
+  try {
+    if (Platform.isWindows) {
+      await Process.run(
+        'powershell',
+        [
+          '-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-Command',
+          r"Add-Type -AssemblyName System.Windows.Forms; $f = New-Object System.Windows.Forms.Form -Property @{TopMost = $true}; "
+              r"[void][System.Windows.Forms.MessageBox]::Show($f, $env:KC_MSG, $env:KC_TITLE, 'OK', 'Information')",
+        ],
+        environment: {'KC_MSG': message, 'KC_TITLE': title},
+      );
+      return;
+    }
+    if (Platform.isLinux) {
+      final z = await Process.run('which', ['zenity']);
+      if (z.exitCode == 0) {
+        await Process.run('zenity', ['--info', '--title=$title', '--text=$message', '--width=420']);
+        return;
+      }
+    }
+  } catch (_) {}
+  stdout.writeln('$title: $message');
+}
+
+Future<String?> _pickFolder(String message) async {
+  try {
+    if (Platform.isWindows) {
+      final r = await Process.run(
+        'powershell',
+        [
+          '-NoProfile', '-NonInteractive', '-Command',
+          r"Add-Type -AssemblyName System.Windows.Forms; $d = New-Object System.Windows.Forms.FolderBrowserDialog; "
+              r"$d.Description = $env:KC_MSG; if ($d.ShowDialog() -eq 'OK') { $d.SelectedPath }",
+        ],
+        environment: {'KC_MSG': message},
+      );
+      final v = '${r.stdout}'.trim();
+      return v.isEmpty ? null : v;
+    }
+    final z = await Process.run('which', ['zenity']);
+    if (z.exitCode == 0) {
+      final r = await Process.run('zenity', ['--file-selection', '--directory', '--title=$message']);
+      final v = '${r.stdout}'.trim();
+      return v.isEmpty ? null : v;
+    }
+  } catch (_) {}
+  return null;
+}
+
+String _exeName() => Platform.isWindows ? 'khmer_calendar.exe' : 'khmer_calendar';
+
+/// Where the installed app most likely lives.
+List<String> _appDirCandidates() {
+  final env = Platform.environment;
+  final out = <String>[File(Platform.resolvedExecutable).parent.path];
+  if (Platform.isWindows) {
+    for (final k in ['LOCALAPPDATA', 'ProgramFiles', 'ProgramFiles(x86)']) {
+      final b = env[k];
+      if (b == null || b.isEmpty) continue;
+      if (k == 'LOCALAPPDATA') out.add('$b\\Programs\\Khmer Calendar');
+      out.add('$b\\Khmer Calendar');
+    }
+  } else {
+    final home = env['HOME'] ?? '';
+    out.addAll(['$home/KhmerCalendar', '$home/khmer_calendar', '$home/Applications/KhmerCalendar', '/opt/khmer_calendar', '/opt/KhmerCalendar']);
+  }
+  return out;
+}
+
+/// Same folder the app uses for its "installed build" stamp and the failure report.
+String? _supportDir() {
+  final env = Platform.environment;
+  if (Platform.isWindows) {
+    final b = env['APPDATA'];
+    return b == null ? null : '$b\\mounsokdara\\khmer_calendar';
+  }
+  final base = env['XDG_DATA_HOME'] ?? (env['HOME'] == null ? null : '${env['HOME']}/.local/share');
+  return base == null ? null : '$base/com.mounsokdara.khmercalendar';
+}
+
+Future<String?> _curl(List<String> extra) async {
+  final curl = Platform.isWindows ? '${Platform.environment['SystemRoot'] ?? r'C:\Windows'}\\System32\\curl.exe' : 'curl';
+  try {
+    final r = await Process.run(curl, ['-sSfL', '--max-time', '600', '-A', _userAgent, ...extra]);
+    return r.exitCode == 0 ? '${r.stdout}' : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+Future<String> _getText(String url) async {
+  final c = HttpClient()
+    ..connectionTimeout = const Duration(seconds: 15)
+    ..userAgent = _userAgent;
+  try {
+    final req = await c.getUrl(Uri.parse(url));
+    req.headers.set('Accept', 'application/vnd.github+json');
+    final res = await req.close().timeout(const Duration(seconds: 30));
+    if (res.statusCode != 200) throw 'GitHub answered ${res.statusCode} for $url';
+    return await res.transform(utf8.decoder).join();
+  } on TlsException {
+    final v = await _curl([url]); // system certificate problem: let curl try
+    if (v != null) return v;
+    throw 'Secure connection failed. Check the date/time, then try again.';
+  } finally {
+    c.close(force: true);
+  }
+}
+
+Future<void> _downloadFile(String url, File target, int expected) async {
+  if (target.existsSync()) target.deleteSync();
+  final c = HttpClient()
+    ..connectionTimeout = const Duration(seconds: 15)
+    ..userAgent = _userAgent;
+  try {
+    final req = await c.getUrl(Uri.parse(url));
+    final res = await req.close().timeout(const Duration(seconds: 30));
+    if (res.statusCode != 200) throw 'Download failed (HTTP ${res.statusCode})';
+    final sink = target.openWrite();
+    var got = 0, last = -1;
+    try {
+      await for (final chunk in res.timeout(const Duration(seconds: 30))) {
+        sink.add(chunk);
+        got += chunk.length;
+        if (expected > 0) {
+          final pct = got * 100 ~/ expected ~/ 10 * 10;
+          if (pct != last) {
+            last = pct;
+            _say('  downloading $pct%');
+          }
+        }
+      }
+    } finally {
+      await sink.close();
+    }
+    if (expected > 0 && got != expected) throw 'Download incomplete, please try again';
+  } on TlsException {
+    final curl = Platform.isWindows ? '${Platform.environment['SystemRoot'] ?? r'C:\Windows'}\\System32\\curl.exe' : 'curl';
+    final r = await Process.run(curl, ['-fL', '--max-time', '600', '-A', _userAgent, '-o', target.path, url]);
+    if (r.exitCode != 0) throw 'Secure connection failed. Check the date/time, then try again.';
+  } finally {
+    c.close(force: true);
+  }
+}
+
+/// Ids of running app processes that live in [appDir].
+Future<List<int>> _appPids(String appDir, String exe) async {
+  final dir = appDir.endsWith(_sep) ? appDir : '$appDir$_sep';
+  final ids = <int>[];
+  try {
+    if (Platform.isWindows) {
+      final r = await Process.run(
+        'powershell',
+        [
+          '-NoProfile', '-NonInteractive', '-Command',
+          r"Get-Process | Where-Object { $_.Path -and $_.Path.StartsWith($env:KC_DIR, [StringComparison]::OrdinalIgnoreCase) } | ForEach-Object { $_.Id }",
+        ],
+        environment: {'KC_DIR': dir},
+      ).timeout(const Duration(seconds: 15));
+      ids.addAll('${r.stdout}'.split(RegExp(r'[\r\n]+')).map(int.tryParse).whereType<int>());
+    } else {
+      for (final e in Directory('/proc').listSync(followLinks: false).whereType<Directory>()) {
+        final id = int.tryParse(e.path.split('/').last);
+        if (id == null || id == pid) continue;
+        try {
+          if (Link('${e.path}/exe').targetSync().startsWith(dir)) ids.add(id);
+        } catch (_) {}
+      }
+    }
+  } catch (_) {}
+  ids.remove(pid);
+  return ids;
+}
+
+Future<String> _linuxArch() async {
+  final r = await Process.run('uname', ['-m']);
+  final m = '${r.stdout}'.trim();
+  return (m == 'aarch64' || m == 'arm64') ? 'arm64' : 'x64';
+}
+
+/// Everything the app would do itself: find the install, fetch the newest package, update, restart.
+Future<void> _standalone(Map<String, String> a) async {
+  const title = 'Khmer Calendar updater';
+  if (!Platform.isWindows && !Platform.isLinux) {
+    await _notify(title, 'This updater supports Windows and Linux. On macOS, use About > Check for updates inside the app.');
+    exit(2);
+  }
+  final exe = _exeName();
+  _say('--- standalone update start');
+
+  // 1. Where is the app?
+  String? appDir = a['app-dir'];
+  if (appDir == null) {
+    for (final c in _appDirCandidates()) {
+      if (File('$c$_sep$exe').existsSync()) {
+        appDir = c;
+        break;
+      }
+    }
+  }
+  appDir ??= await _pickFolder('Select the folder that contains $exe');
+  if (appDir == null || !File('$appDir$_sep$exe').existsSync()) {
+    await _notify(title, 'Khmer Calendar was not found.\n\nRun the updater again and choose the folder that contains $exe, or start it with --app-dir <folder>.');
+    exit(2);
+  }
+  _say('app folder: $appDir');
+
+  String? stampPath;
+  final support = _supportDir();
+  if (support != null) stampPath = '$support${_sep}updatebuild.json';
+
+  try {
+    // 2. What is the newest build for this device?
+    _say('checking the latest version...');
+    final versionText = await _getText('https://raw.githubusercontent.com/$_repo/main/version.txt?cb=${DateTime.now().millisecondsSinceEpoch}');
+    final version = RegExp(r'^\s*versionName\s*=\s*(\S+)\s*$', multiLine: true).firstMatch(versionText)?.group(1);
+    if (version == null) throw 'version.txt has no versionName';
+    final release = jsonDecode(await _getText('https://api.github.com/repos/$_repo/releases/tags/v$version')) as Map<String, dynamic>;
+    final assets = (release['assets'] as List? ?? const []).cast<Map<String, dynamic>>();
+
+    final wanted = <String>[];
+    if (Platform.isWindows) {
+      final env = Platform.environment;
+      final arm = '${env['PROCESSOR_ARCHITEW6432'] ?? env['PROCESSOR_ARCHITECTURE'] ?? ''}'.toUpperCase() == 'ARM64';
+      if (arm) wanted.add('KhmerCalendar-windows-arm64.zip');
+      wanted.add('KhmerCalendar-windows-x64.zip');
+    } else {
+      wanted.add('KhmerCalendar-linux-${await _linuxArch()}.tar.gz');
+    }
+    Map<String, dynamic>? asset;
+    for (final w in wanted) {
+      asset = assets.where((x) => x['name'] == w && x['state'] == 'uploaded').firstOrNull;
+      if (asset != null) break;
+    }
+    if (asset == null) throw 'No package for this device in release v$version yet. It may still be publishing, try again in a few minutes.';
+
+    // 3. Download.
+    final dl = Directory('${Directory.systemTemp.path}${_sep}khmer_update_dl');
+    if (dl.existsSync()) dl.deleteSync(recursive: true);
+    dl.createSync(recursive: true);
+    final archive = File('${dl.path}$_sep${asset['name']}');
+    _say('downloading ${asset['name']} (v$version)...');
+    await _downloadFile(asset['browser_download_url'] as String, archive, (asset['size'] as num?)?.toInt() ?? 0);
+
+    // 4. Close the app if it runs, then update.
+    final pids = await _appPids(appDir, exe);
+    if (pids.isNotEmpty) _say('closing the running app (${pids.join(', ')})...');
+    for (final p in pids) {
+      await _closeApp(p);
+    }
+    final sha = RegExp(r'\(([0-9a-fA-F]{7,40})\)').firstMatch('${release['name'] ?? ''}')?.group(1) ?? '';
+    await _applyUpdate(
+      appDir: appDir,
+      exe: exe,
+      archive: archive.path,
+      stamp: stampPath,
+      builtAt: '${asset['updated_at'] ?? ''}',
+      sha: sha,
+    );
+    _say('update ok (v$version)');
+  } catch (e) {
+    _say('update FAILED: $e');
+    if (stampPath != null) {
+      _writeResult(stampPath, {
+        'status': 'failed',
+        'reason': e is _Blocked ? 'locked' : 'error',
+        'files': e is _Blocked ? e.files.take(20).toList() : <String>[],
+        'processes': e is _Blocked ? e.processes : <String>[],
+        'detail': '$e',
+      });
+    }
+    if (e is! _Blocked) await _notify(title, 'The update did not finish.\n\n$e\n\nYour current version is unchanged.');
+    else await _notify(title, 'The update was cancelled because some app files are still in use. Your current version is unchanged.');
+    exit(1);
+  }
+  try {
+    await _start(appDir, exe);
+    _say('app started');
+  } catch (e) {
+    _say('could not start the app: $e');
+  }
+}
+
+/// Unpack, check nothing is locked, copy, write the stamp, clean up.
+Future<void> _applyUpdate({
+  required String appDir,
+  required String exe,
+  required String archive,
+  String? stamp,
+  String builtAt = '',
+  String sha = '',
+}) async {
+  final stage = await _unpack(archive);
+  final root = _packageRoot(stage, exe);
+  await _waitForUnlocked(root, Directory(appDir));
+  await _copyOver(root, Directory(appDir), exe);
+  if (stamp != null && stamp.isNotEmpty) {
+    final f = File(stamp)..parent.createSync(recursive: true);
+    f.writeAsStringSync('{"builtAt":"$builtAt","sha":"$sha"}');
+  }
+  try {
+    stage.deleteSync(recursive: true);
+    File(archive).deleteSync();
+  } catch (_) {}
+  _clearResult(stamp);
+}
+
 Future<void> main(List<String> args) async {
   final a = _parse(args);
   final pid = int.tryParse(a['pid'] ?? '');
   final appDir = a['app-dir'];
   final exe = a['exe'];
   final archive = a['archive'];
-  if (pid == null || appDir == null || exe == null || archive == null) {
+  if (pid == null || exe == null || archive == null || appDir == null) {
+    // Started by hand (double click): do the whole job ourselves.
+    if (pid == null && archive == null) {
+      await _standalone(a);
+      return;
+    }
     _say('Missing arguments: $args');
     exit(2);
   }
   _say('--- update start: $args');
   try {
     await _closeApp(pid);
-    final stage = await _unpack(archive);
-    final root = _packageRoot(stage, exe);
-    await _waitForUnlocked(root, Directory(appDir));
-    await _copyOver(root, Directory(appDir), exe);
-    final stamp = a['stamp'];
-    if (stamp != null && stamp.isNotEmpty) {
-      final f = File(stamp)..parent.createSync(recursive: true);
-      f.writeAsStringSync('{"builtAt":"${a['built-at'] ?? ''}","sha":"${a['sha'] ?? ''}"}');
-    }
-    try {
-      stage.deleteSync(recursive: true);
-      File(archive).deleteSync();
-    } catch (_) {}
-    _clearResult(stamp);
+    await _applyUpdate(
+      appDir: appDir,
+      exe: exe,
+      archive: archive,
+      stamp: a['stamp'],
+      builtAt: a['built-at'] ?? '',
+      sha: a['sha'] ?? '',
+    );
     _say('update ok');
   } catch (e) {
     _say('update FAILED: $e');
