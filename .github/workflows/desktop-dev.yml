@@ -4,7 +4,7 @@
 #   KhmerCalendar-linux-{x64,arm64}.tar.gz (contains update-linux-{arch})
 #   KhmerCalendar-macos-{arm64,x86_64,universal}.dmg (contains update-macos.sh)
 # Also published on their own (download and run, the app does not need to be started):
-#   KhmerCalendar-Updater-windows-x64.exe, KhmerCalendar-Updater-linux-{x64,arm64}
+#   KhmerCalendar-Updater-windows-x64.exe, KhmerCalendar-Updater-linux-{x64,arm64}, KhmerCalendar-Updater-macos.zip
 name: Desktop dev
 
 on:
@@ -136,6 +136,18 @@ jobs:
         with:
           name: desktop-macos-${{ matrix.arch }}
           path: KhmerCalendar-macos-${{ matrix.arch }}.dmg
+      - name: Standalone updater (zip keeps the executable bit; same file for every arch, so only one job makes it)
+        if: matrix.arch == 'universal'
+        run: |
+          mkdir updater-macos
+          cp tools/updater/update-macos.sh updater-macos/KhmerCalendar-Updater-macos.command
+          chmod +x updater-macos/KhmerCalendar-Updater-macos.command
+          (cd updater-macos && zip -q ../KhmerCalendar-Updater-macos.zip KhmerCalendar-Updater-macos.command)
+      - uses: actions/upload-artifact@v4
+        if: matrix.arch == 'universal'
+        with:
+          name: updater-macos
+          path: KhmerCalendar-Updater-macos.zip
 
   linux:
     name: linux-${{ matrix.arch }}

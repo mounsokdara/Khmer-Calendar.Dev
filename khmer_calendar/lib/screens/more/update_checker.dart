@@ -1,7 +1,7 @@
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../theme.dart' show appVersion;
+import '../../theme.dart' show appBuildNumber, appVersion;
 import '../../web_refresh.dart';
 
 const currentAppVersion = appVersion;
@@ -29,7 +29,14 @@ Future<UpdateInfo?> checkForAppUpdate() async {
       .timeout(const Duration(seconds: 8));
   if (response.statusCode != 200) return null;
   final latest = parseVersionName(response.body);
-  if (latest == null || _compareVersions(latest, currentAppVersion) <= 0) return null;
+  if (latest == null) return null;
+  final c = _compareVersions(latest, currentAppVersion);
+  if (c < 0) return null;
+  if (c == 0) {
+    // Same version name: only a higher build number (versionCode) counts as an update.
+    final code = _parseVersionCode(response.body);
+    if (code == null || code <= appBuildNumber) return null;
+  }
   return UpdateInfo(version: latest, url: latestReleaseUrl);
 }
 
@@ -41,10 +48,15 @@ Future<UpdateInfo?> checkForWebUpdate() async {
   return UpdateInfo(version: deployed, url: '');
 }
 
+int? _parseVersionCode(String text) {
+  final m = RegExp(r'^\s*versionCode\s*=\s*(\d+)\s*$', multiLine: true).firstMatch(text);
+  return m == null ? null : int.tryParse(m.group(1)!);
+}
+
 int _compareVersions(String a, String b) {
   final aa = _parts(a);
   final bb = _parts(b);
-  for (var i = 0; i < 3; i++) {
+  for (var i = 0; i < 4; i++) {
     final c = aa[i].compareTo(bb[i]);
     if (c != 0) return c;
   }
@@ -52,13 +64,9 @@ int _compareVersions(String a, String b) {
 }
 
 List<int> _parts(String value) {
-  final match = RegExp(r'^(\d+)(?:\.(\d+))?(?:\.(\d+))?').firstMatch(value);
-  if (match == null) return const [0, 0, 0];
-  return [
-    int.tryParse(match.group(1) ?? '') ?? 0,
-    int.tryParse(match.group(2) ?? '') ?? 0,
-    int.tryParse(match.group(3) ?? '') ?? 0,
-  ];
+  final match = RegExp(r'^\s*v?(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:\.(\d+))?').firstMatch(value);
+  if (match == null) return const [0, 0, 0, 0];
+  return [for (var i = 1; i <= 4; i++) int.tryParse(match.group(i) ?? '') ?? 0];
 }
 
 Future<bool> openLatestRelease([String? url]) {

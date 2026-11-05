@@ -8,6 +8,21 @@ const updateVersionFileUrl = 'https://raw.githubusercontent.com/$updateRepo/main
 String updateReleasePageUrl(String versionName) =>
     'https://github.com/$updateRepo/releases/tag/v$versionName';
 
+/// How the published build compares with the app that is running.
+enum UpdateKind {
+  /// version name or build number is higher than the installed one
+  newerVersion,
+
+  /// same version, but a newer build of it was published after this one was installed
+  newerBuild,
+
+  /// nothing newer
+  upToDate,
+
+  /// the installed app is newer than the published release
+  aheadOfRelease,
+}
+
 /// One downloadable build, already narrowed down to the package that fits this device.
 class UpdateBuild {
   const UpdateBuild({
@@ -18,7 +33,9 @@ class UpdateBuild {
     required this.size,
     required this.builtAt,
     required this.sha,
-    required this.isNewer,
+    required this.kind,
+    this.installedVersion = '',
+    this.remoteBuildNumber,
     this.updaterName = '',
     this.updaterUrl = '',
   });
@@ -30,7 +47,16 @@ class UpdateBuild {
   final int size;
   final DateTime builtAt;
   final String sha;
-  final bool isNewer;
+  final UpdateKind kind;
+
+  /// Version of the app that is running now (for the "1.0.4 -> 1.0.5" text).
+  final String installedVersion;
+
+  /// versionCode from version.txt, when present.
+  final int? remoteBuildNumber;
+
+  /// True only when there really is something newer to install.
+  bool get isNewer => kind == UpdateKind.newerVersion || kind == UpdateKind.newerBuild;
 
   /// Desktop only: updater file name inside the package archive.
   /// Windows: `update-windows.exe`, Linux: `update-linux-x64`, macOS: `update-macos.sh`.

@@ -20,4 +20,4 @@ Future<UpdateFailure?> takeUpdateFailure() async => null;
 
 Future<List<AppInstance>> otherAppInstances() async => const [];
 
-Future<void> forceCloseInstances(List<AppInstance> instances) async {}
+Future<void> forceCloseInstances(List<AppInstance> instances, {bool admin = false}) async {}

@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
-import '../../theme.dart' show appVersion;
+import '../../theme.dart' show appBuildNumber, appVersion;
 import 'device_arch.dart';
 import 'dev_update_types.dart';
 
@@ -24,23 +24,47 @@ const _packageByDigit = <int, String>{0: 'universal', 1: 'arm32', 2: 'arm64', 3:
 const _headers = {'Accept': 'application/vnd.github+json', 'User-Agent': 'khmer-calendar-updater'};
 
 int _compareVersions(String a, String b) {
+  // Accepts 1.0.5, v1.0.5, 1.0.5.2, 1.0.5-dev (suffixes are ignored).
   List<int> parts(String value) {
-    final m = RegExp(r'^(\d+)(?:\.(\d+))?(?:\.(\d+))?').firstMatch(value);
-    if (m == null) return const [0, 0, 0];
-    return [
-      int.tryParse(m.group(1) ?? '') ?? 0,
-      int.tryParse(m.group(2) ?? '') ?? 0,
-      int.tryParse(m.group(3) ?? '') ?? 0,
-    ];
+    final m = RegExp(r'^\s*v?(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:\.(\d+))?').firstMatch(value);
+    if (m == null) return const [0, 0, 0, 0];
+    return [for (var i = 1; i <= 4; i++) int.tryParse(m.group(i) ?? '') ?? 0];
   }
 
   final aa = parts(a);
   final bb = parts(b);
-  for (var i = 0; i < 3; i++) {
+  for (var i = 0; i < 4; i++) {
     final c = aa[i].compareTo(bb[i]);
     if (c != 0) return c;
   }
   return 0;
+}
+
+int? _parseVersionCode(String text) {
+  final m = RegExp(r'^\s*versionCode\s*=\s*(\d+)\s*$', multiLine: true).firstMatch(text);
+  return m == null ? null : int.tryParse(m.group(1)!);
+}
+
+/// The app version is checked FIRST: only a higher version name or build number counts as an update.
+/// Only when both are equal, a build that was published after this one was installed counts as a
+/// newer build of the same version. [builtAt] is null when the publish time is not known.
+UpdateKind _decideKind({
+  required String remoteVersion,
+  required int? remoteBuild,
+  required DateTime? builtAt,
+  required DateTime? installedAt,
+}) {
+  final c = _compareVersions(remoteVersion, appVersion);
+  if (c > 0) return UpdateKind.newerVersion;
+  if (c < 0) return UpdateKind.aheadOfRelease;
+  if (remoteBuild != null) {
+    if (remoteBuild > appBuildNumber) return UpdateKind.newerVersion;
+    if (remoteBuild < appBuildNumber) return UpdateKind.aheadOfRelease;
+  }
+  if (builtAt != null && installedAt != null && builtAt.isAfter(installedAt.add(const Duration(seconds: 30)))) {
+    return UpdateKind.newerBuild;
+  }
+  return UpdateKind.upToDate; // no stamp / no proof of a newer build: do not claim an update
 }
 
 String? _parseVersionName(String text) {
@@ -261,6 +285,24 @@ Future<UpdateBuild?> fetchUpdateBuild() async {
     if (_isSslCertError(e)) throw const UpdateException(_sslCertHint);
     rethrow;
   }
+  final remoteBuild = _parseVersionCode(verRes.body);
+  if (res.statusCode == 403 || res.statusCode == 429) {
+    // GitHub API rate limit (60 requests per hour without a login): use the direct download link instead.
+    return UpdateBuild(
+      versionName: versionName,
+      package: package,
+      assetName: assetName,
+      url: 'https://github.com/$updateRepo/releases/download/$tag/$assetName',
+      size: 0,
+      builtAt: DateTime.now().toUtc(),
+      sha: '',
+      kind: _decideKind(remoteVersion: versionName, remoteBuild: remoteBuild, builtAt: null, installedAt: installedAt),
+      installedVersion: appVersion,
+      remoteBuildNumber: remoteBuild,
+      updaterName: updaterName,
+      updaterUrl: '',
+    );
+  }
   if (res.statusCode == 404) {
     throw UpdateException('Release $tag not found yet');
   }
@@ -286,8 +328,6 @@ Future<UpdateBuild?> fetchUpdateBuild() async {
 
   final builtAt = DateTime.parse(asset['updated_at'] as String).toUtc();
   final sha = RegExp(r'\(([0-9a-fA-F]{7,40})\)').firstMatch('${release['name'] ?? ''}')?.group(1) ?? '';
-  final newerByVersion = _compareVersions(versionName, appVersion) > 0;
-  final newerByTime = installedAt == null || builtAt.isAfter(installedAt);
   return UpdateBuild(
     versionName: versionName,
     package: package,
@@ -296,7 +336,9 @@ Future<UpdateBuild?> fetchUpdateBuild() async {
     size: (asset['size'] as num?)?.toInt() ?? 0,
     builtAt: builtAt,
     sha: sha,
-    isNewer: newerByVersion || newerByTime,
+    kind: _decideKind(remoteVersion: versionName, remoteBuild: remoteBuild, builtAt: builtAt, installedAt: installedAt),
+    installedVersion: appVersion,
+    remoteBuildNumber: remoteBuild,
     updaterName: updaterName,
     updaterUrl: '',
   );
@@ -613,17 +655,42 @@ Future<List<AppInstance>> otherAppInstances() async {
   return const [];
 }
 
-/// Force close the given copies (never this process).
-Future<void> forceCloseInstances(List<AppInstance> instances) async {
-  for (final i in instances) {
-    if (i.id == pid) continue;
-    try {
-      if (Platform.isWindows) {
-        await Process.run('taskkill', ['/PID', '${i.id}', '/T', '/F']);
-      } else {
-        await Process.run('kill', ['-9', '${i.id}']);
+/// Force close the given copies (never this process). With [admin] the system asks the user for
+/// permission first (Windows UAC, Linux polkit, macOS password) and closes them with admin rights.
+Future<void> forceCloseInstances(List<AppInstance> instances, {bool admin = false}) async {
+  final ids = [for (final i in instances) if (i.id != pid) i.id];
+  if (ids.isEmpty) return;
+  try {
+    if (!admin) {
+      for (final id in ids) {
+        if (Platform.isWindows) {
+          await Process.run('taskkill', ['/PID', '$id', '/T', '/F']);
+        } else {
+          await Process.run('kill', ['-9', '$id']);
+        }
       }
-    } catch (_) {}
-  }
-  await Future<void>.delayed(const Duration(milliseconds: 1200)); // let the system release the files
+    } else if (Platform.isWindows) {
+      final args = [for (final id in ids) '/PID $id', '/T', '/F'].join(' ');
+      await Process.run(
+        'powershell',
+        [
+          '-NoProfile',
+          '-NonInteractive',
+          '-WindowStyle',
+          'Hidden',
+          '-Command',
+          r"try { Start-Process -FilePath 'taskkill.exe' -ArgumentList $env:KC_ARGS -Verb RunAs -Wait -WindowStyle Hidden } catch { exit 1 }",
+        ],
+        environment: {'KC_ARGS': args},
+      );
+    } else if (Platform.isMacOS) {
+      await Process.run('osascript', [
+        '-e',
+        'do shell script "kill -9 ${ids.join(' ')}" with administrator privileges',
+      ]);
+    } else {
+      await Process.run('pkexec', ['/bin/kill', '-9', ...ids.map((e) => '$e')]);
+    }
+  } catch (_) {}
+  await Future<void>.delayed(const Duration(milliseconds: 1500)); // let the system release the files
 }
