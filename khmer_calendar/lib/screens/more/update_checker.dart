@@ -1,7 +1,9 @@
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../theme.dart' show appBuildNumber, appVersion;
+import '../../theme.dart' show appVersion;
+// Prefixed: package:flutter/services.dart also exports a symbol named appBuildNumber.
+import '../../theme.dart' as theme show appBuildNumber;
 import '../../web_refresh.dart';
 
 const currentAppVersion = appVersion;
@@ -35,7 +37,7 @@ Future<UpdateInfo?> checkForAppUpdate() async {
   if (c == 0) {
     // Same version name: only a higher build number (versionCode) counts as an update.
     final code = _parseVersionCode(response.body);
-    if (code == null || code <= appBuildNumber) return null;
+    if (code == null || code <= theme.appBuildNumber) return null;
   }
   return UpdateInfo(version: latest, url: latestReleaseUrl);
 }

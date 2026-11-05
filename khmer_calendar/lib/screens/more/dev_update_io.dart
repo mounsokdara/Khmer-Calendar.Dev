@@ -5,7 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
-import '../../theme.dart' show appBuildNumber, appVersion;
+import '../../theme.dart' show appVersion;
+// Prefixed: package:flutter/services.dart also exports a symbol named appBuildNumber.
+import '../../theme.dart' as theme show appBuildNumber;
 import 'device_arch.dart';
 import 'dev_update_types.dart';
 
@@ -58,8 +60,8 @@ UpdateKind _decideKind({
   if (c > 0) return UpdateKind.newerVersion;
   if (c < 0) return UpdateKind.aheadOfRelease;
   if (remoteBuild != null) {
-    if (remoteBuild > appBuildNumber) return UpdateKind.newerVersion;
-    if (remoteBuild < appBuildNumber) return UpdateKind.aheadOfRelease;
+    if (remoteBuild > theme.appBuildNumber) return UpdateKind.newerVersion;
+    if (remoteBuild < theme.appBuildNumber) return UpdateKind.aheadOfRelease;
   }
   if (builtAt != null && installedAt != null && builtAt.isAfter(installedAt.add(const Duration(seconds: 30)))) {
     return UpdateKind.newerBuild;
