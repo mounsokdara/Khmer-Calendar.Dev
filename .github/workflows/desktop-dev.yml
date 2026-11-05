@@ -1,8 +1,11 @@
 # Desktop builds for the in-app updater (About > Check for updates).
-# Updater helpers are packed inside each platform package (not separate release assets):
-#   KhmerCalendar-windows-{x64,arm64}.zip   (contains update-windows.exe)
-#   KhmerCalendar-linux-{x64,arm64}.tar.gz  (contains update-linux-{x64,arm64})
-#   KhmerCalendar-macos-{arm64,x86_64,universal}.dmg (contains update-macos.sh next to the .app)
+# Packages + separate updater assets are uploaded to the version tag release:
+#   KhmerCalendar-windows-{x64,arm64}.zip
+#   update-windows-{x64,arm64}.exe
+#   KhmerCalendar-linux-{x64,arm64}.tar.gz
+#   update-linux-{x64,arm64}
+#   KhmerCalendar-macos-{arm64,x86_64,universal}.dmg
+#   update-macos.sh
 name: Desktop dev
 
 on:
@@ -57,9 +60,11 @@ jobs:
       - name: Bundle Visual C++ runtime
         shell: pwsh
         run: ./scripts/bundle-vcruntime.ps1 -Dir khmer_calendar\build\windows\${{ matrix.arch }}\runner\Release -Arch ${{ matrix.arch }}
-      - name: Build updater into the package folder
+      - name: Build updater (separate asset + copy into package)
         shell: pwsh
-        run: dart compile exe tools/updater/update.dart -o khmer_calendar\build\windows\${{ matrix.arch }}\runner\Release\update-windows.exe
+        run: |
+          dart compile exe tools/updater/update.dart -o update-windows-${{ matrix.arch }}.exe
+          Copy-Item update-windows-${{ matrix.arch }}.exe khmer_calendar\build\windows\${{ matrix.arch }}\runner\Release\update-windows.exe
       - name: Pack windows
         shell: pwsh
         run: Compress-Archive -Path khmer_calendar\build\windows\${{ matrix.arch }}\runner\Release\* -DestinationPath KhmerCalendar-windows-${{ matrix.arch }}.zip
@@ -69,7 +74,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: desktop-windows-${{ matrix.arch }}
-          path: KhmerCalendar-windows-${{ matrix.arch }}.zip
+          path: |
+            KhmerCalendar-windows-${{ matrix.arch }}.zip
+            update-windows-${{ matrix.arch }}.exe
 
   macos-build:
     runs-on: macos-latest
@@ -121,12 +128,18 @@ jobs:
           mv "$APP" dmgroot/
           cp tools/updater/update-macos.sh dmgroot/update-macos.sh
           chmod +x dmgroot/update-macos.sh
+          if [ "${{ matrix.arch }}" = "universal" ]; then
+            cp tools/updater/update-macos.sh update-macos.sh
+            chmod +x update-macos.sh
+          fi
           hdiutil create -volname "Khmer Calendar" -srcfolder dmgroot -ov -format UDZO "KhmerCalendar-macos-${{ matrix.arch }}.dmg"
           ls -lh "KhmerCalendar-macos-${{ matrix.arch }}.dmg"
       - uses: actions/upload-artifact@v4
         with:
           name: desktop-macos-${{ matrix.arch }}
-          path: KhmerCalendar-macos-${{ matrix.arch }}.dmg
+          path: |
+            KhmerCalendar-macos-${{ matrix.arch }}.dmg
+            update-macos.sh
 
   linux:
     name: linux-${{ matrix.arch }}
@@ -167,16 +180,19 @@ jobs:
             echo "::error title=flutter build linux failed::$(tail -n 25 "$RUNNER_TEMP/build.log" | tr '\n' '|')"
             exit 1
           }
-      - name: Build updater into the package folder
+      - name: Build updater (separate asset + copy into package)
         run: |
-          dart compile exe tools/updater/update.dart -o khmer_calendar/build/linux/${{ matrix.arch }}/release/bundle/update-linux-${{ matrix.arch }}
-          chmod +x khmer_calendar/build/linux/${{ matrix.arch }}/release/bundle/update-linux-${{ matrix.arch }}
+          dart compile exe tools/updater/update.dart -o update-linux-${{ matrix.arch }}
+          chmod +x update-linux-${{ matrix.arch }}
+          cp update-linux-${{ matrix.arch }} khmer_calendar/build/linux/${{ matrix.arch }}/release/bundle/update-linux-${{ matrix.arch }}
       - name: Pack linux
         run: tar -C khmer_calendar/build/linux/${{ matrix.arch }}/release/bundle -czf KhmerCalendar-linux-${{ matrix.arch }}.tar.gz .
       - uses: actions/upload-artifact@v4
         with:
           name: desktop-linux-${{ matrix.arch }}
-          path: KhmerCalendar-linux-${{ matrix.arch }}.tar.gz
+          path: |
+            KhmerCalendar-linux-${{ matrix.arch }}.tar.gz
+            update-linux-${{ matrix.arch }}
 
   publish:
     needs: [windows, macos-pack, linux]
@@ -188,14 +204,20 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: dist
-      - name: Upload packages only
+      - name: Upload packages and updaters
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir out
-          find dist -type f \( -name 'KhmerCalendar-windows-*.zip' -o -name 'KhmerCalendar-linux-*.tar.gz' -o -name 'KhmerCalendar-macos-*.dmg' \) -exec cp -t out {} +
+          find dist -type f \( \
+            -name 'KhmerCalendar-windows-*.zip' -o \
+            -name 'KhmerCalendar-linux-*.tar.gz' -o \
+            -name 'KhmerCalendar-macos-*.dmg' -o \
+            -name 'update-windows-*.exe' -o \
+            -name 'update-linux-*' -o \
+            -name 'update-macos.sh' \
+          \) -exec cp -t out {} +
           ls -lh out
-          # Prefer a version tag from version.txt when present; otherwise skip if no release yet.
           if [ -f version.txt ]; then
             VERSION=$(sed -n 's/^versionName=//p' version.txt | head -1 | tr -d '\r')
             TAG="v${VERSION}"
