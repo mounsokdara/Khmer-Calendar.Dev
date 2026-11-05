@@ -109,8 +109,15 @@ class AboutGroup extends StatelessWidget {
 }
 
 class QuickAction {
-  const QuickAction({required this.icon, required this.label, required this.onTap});
-  final IconData icon;
+  const QuickAction({
+    this.icon,
+    this.iconWidget,
+    required this.label,
+    required this.onTap,
+  }) : assert(icon != null || iconWidget != null);
+
+  final IconData? icon;
+  final Widget? iconWidget;
   final String label;
   final VoidCallback onTap;
 }
@@ -147,7 +154,8 @@ class AboutQuickActions extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 4),
                     child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                      Icon(items[i].icon, size: 28, color: cs.onSurface),
+                      items[i].iconWidget ??
+                          Icon(items[i].icon, size: 28, color: cs.onSurface),
                       const SizedBox(height: 10),
                       Text(
                         items[i].label,

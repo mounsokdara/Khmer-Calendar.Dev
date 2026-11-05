@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' as services;
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
@@ -43,6 +44,15 @@ Future<_GithubProfile?> _loadProfile() async {
   } catch (_) {
     return null;
   }
+}
+
+Widget _githubIcon({required Color color, double size = 28}) {
+  return SvgPicture.asset(
+    'assets/icons/github.svg',
+    width: size,
+    height: size,
+    colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+  );
 }
 
 class _Hero extends StatelessWidget {
@@ -148,7 +158,7 @@ class _AuthorCard extends StatelessWidget {
                     tooltip: km ? 'ទំព័រ GitHub' : 'GitHub profile',
                     iconSize: 28,
                     onPressed: onOpen,
-                    icon: const Icon(Icons.code),
+                    icon: _githubIcon(color: cs.onSurface),
                   ),
                 ]),
               ]);
@@ -172,6 +182,7 @@ class AboutPage extends StatelessWidget {
         final lang = store.lang;
         final km = lang == Lang.km;
         final isFdroid = const bool.fromEnvironment('FDROID');
+        final cs = Theme.of(context).colorScheme;
         void open(String url) => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
         return OverlayScaffold(
           title: t(lang, 'aboutTitle'),
@@ -192,7 +203,11 @@ class AboutPage extends StatelessWidget {
                           label: km ? 'កំណត់ត្រាការផ្លាស់ប្តូរ' : 'Changelog',
                           onTap: () => context.push('/changelog'),
                         ),
-                        QuickAction(icon: Icons.code, label: 'GitHub', onTap: () => open(appSourceUrl)),
+                        QuickAction(
+                          iconWidget: _githubIcon(color: cs.onSurface),
+                          label: 'GitHub',
+                          onTap: () => open(appSourceUrl),
+                        ),
                         // F-Droid builds (--dart-define=FDROID=true) update through F-Droid, not GitHub.
                         if (!isFdroid)
                           QuickAction(
