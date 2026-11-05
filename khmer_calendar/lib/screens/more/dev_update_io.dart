@@ -427,8 +427,10 @@ Future<void> _extractUpdaterFromPackage(String archivePath, String updaterName) 
       );
     }
   } else if (Platform.isLinux) {
-    final r = await Process.run('tar', ['-xzf', archivePath, '-C', dir, './$updaterName', updaterName]);
-    if (r.exitCode != 0 || !out.existsSync()) {
+    // Package stores ./update-linux-x64. Requesting the bare name makes tar exit 2
+    // even when the file was extracted successfully — only check existsSync.
+    await Process.run('tar', ['-xzf', archivePath, '-C', dir, './$updaterName']);
+    if (!out.existsSync()) {
       throw UpdateException('Package is missing the updater ($updaterName)');
     }
     await Process.run('chmod', ['+x', out.path]);
