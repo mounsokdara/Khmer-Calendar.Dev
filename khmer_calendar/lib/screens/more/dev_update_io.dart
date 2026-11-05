@@ -50,6 +50,63 @@ String? _parseVersionName(String text) {
   return m?.group(1);
 }
 
+/// True when Dart could not verify the TLS chain (common on some Windows installs).
+bool _isSslCertError(Object e) {
+  final s = e.toString();
+  return s.contains('CERTIFICATE_VERIFY_FAILED') ||
+      s.contains('HandshakeException') ||
+      s.contains('unable to get local issuer certificate');
+}
+
+const _sslCertHint =
+    'Secure connection failed (missing system certificate). '
+    'Check the date/time is correct, open https://github.com in a browser once, '
+    'or turn off antivirus HTTPS scanning, then try again.';
+
+/// Windows (and some Linux) only ship a subset of root CAs until something uses WinINet/Schannel.
+/// Dart/BoringSSL does not trigger that lazy install, so HTTPS to GitHub can fail on a "fresh" PC.
+/// One PowerShell / curl hit to github.com usually installs the missing roots for the user.
+Future<void> _warmSystemCertificates() async {
+  if (Platform.isWindows) {
+    try {
+      await Process.run(
+        'powershell',
+        [
+          '-NoProfile',
+          '-Command',
+          'try { Invoke-WebRequest -Uri https://api.github.com -UseBasicParsing -TimeoutSec 12 | Out-Null } catch {}',
+        ],
+      ).timeout(const Duration(seconds: 20));
+    } catch (_) {}
+    return;
+  }
+  if (Platform.isLinux) {
+    try {
+      await Process.run('curl', ['-fsS', '-o', '/dev/null', '--max-time', '12', 'https://api.github.com'])
+          .timeout(const Duration(seconds: 20));
+    } catch (_) {}
+  }
+}
+
+Future<http.Response> _httpGet(Uri uri, {Map<String, String>? headers}) async {
+  Future<http.Response> once() => http.get(uri, headers: headers).timeout(const Duration(seconds: 12));
+
+  try {
+    return await once();
+  } catch (e) {
+    if (!_isSslCertError(e)) rethrow;
+    await _warmSystemCertificates();
+    try {
+      return await once();
+    } catch (e2) {
+      if (_isSslCertError(e2)) {
+        throw const UpdateException(_sslCertHint);
+      }
+      rethrow;
+    }
+  }
+}
+
 /// Looks up the build for this device from the release tag that matches version.txt.
 /// Desktop packages include the updater binary inside the archive (not a separate release asset).
 Future<UpdateBuild?> fetchUpdateBuild() async {
@@ -94,9 +151,14 @@ Future<UpdateBuild?> fetchUpdateBuild() async {
     installedAt = await _readStamp();
   }
 
-  final verRes = await http
-      .get(Uri.parse('$updateVersionFileUrl?cb=${DateTime.now().millisecondsSinceEpoch}'))
-      .timeout(const Duration(seconds: 12));
+  late final http.Response verRes;
+  try {
+    verRes = await _httpGet(Uri.parse('$updateVersionFileUrl?cb=${DateTime.now().millisecondsSinceEpoch}'));
+  } catch (e) {
+    if (e is UpdateException) rethrow;
+    if (_isSslCertError(e)) throw const UpdateException(_sslCertHint);
+    rethrow;
+  }
   if (verRes.statusCode != 200) {
     throw UpdateException('Could not read version.txt (${verRes.statusCode})');
   }
@@ -106,9 +168,17 @@ Future<UpdateBuild?> fetchUpdateBuild() async {
   }
 
   final tag = 'v$versionName';
-  final res = await http
-      .get(Uri.parse('https://api.github.com/repos/$updateRepo/releases/tags/$tag'), headers: _headers)
-      .timeout(const Duration(seconds: 12));
+  late final http.Response res;
+  try {
+    res = await _httpGet(
+      Uri.parse('https://api.github.com/repos/$updateRepo/releases/tags/$tag'),
+      headers: _headers,
+    );
+  } catch (e) {
+    if (e is UpdateException) rethrow;
+    if (_isSslCertError(e)) throw const UpdateException(_sslCertHint);
+    rethrow;
+  }
   if (res.statusCode == 404) {
     throw UpdateException('Release $tag not found yet');
   }
@@ -175,8 +245,26 @@ Future<void> _fetchTo(
   final client = http.Client();
   IOSink? sink;
   try {
-    final response =
-        await client.send(http.Request('GET', Uri.parse(url))..headers.addAll(_headers)).timeout(const Duration(seconds: 20));
+    late final http.StreamedResponse response;
+    try {
+      response = await client
+          .send(http.Request('GET', Uri.parse(url))..headers.addAll(_headers))
+          .timeout(const Duration(seconds: 20));
+    } catch (e) {
+      if (_isSslCertError(e)) {
+        await _warmSystemCertificates();
+        try {
+          response = await client
+              .send(http.Request('GET', Uri.parse(url))..headers.addAll(_headers))
+              .timeout(const Duration(seconds: 20));
+        } catch (e2) {
+          if (_isSslCertError(e2)) throw const UpdateException(_sslCertHint);
+          rethrow;
+        }
+      } else {
+        rethrow;
+      }
+    }
     if (response.statusCode != 200) throw UpdateException('Download failed (${response.statusCode})');
 
     final total = response.contentLength ?? expectedSize;
