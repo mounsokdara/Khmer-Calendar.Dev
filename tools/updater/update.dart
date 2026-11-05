@@ -109,14 +109,21 @@ class _Blocked implements Exception {
       '${processes.isEmpty ? '' : ' (${processes.join(', ')})'}';
 }
 
+/// True when [path] is this very updater program (it can never replace its own running file).
+bool _isSelf(String path) {
+  final me = Platform.resolvedExecutable;
+  return Platform.isWindows ? path.toLowerCase() == me.toLowerCase() : path == me;
+}
+
 /// Package files that already exist in the app folder but cannot be opened for writing right now
-/// (Windows: sharing violation; Linux: "text file busy"; or read-only).
+/// (Windows: sharing violation; Linux: "text file busy"; or read-only). The running updater itself
+/// is skipped: it is not part of what has to be replaced.
 List<String> _lockedFiles(Directory from, Directory to) {
   final out = <String>[];
   for (final f in from.listSync(recursive: true, followLinks: false).whereType<File>()) {
     final rel = f.path.substring(from.path.length + 1);
     final dest = File('${to.path}$_sep$rel');
-    if (!dest.existsSync()) continue;
+    if (!dest.existsSync() || _isSelf(dest.path)) continue;
     try {
       dest.openSync(mode: FileMode.append).closeSync();
     } on FileSystemException {
@@ -126,81 +133,132 @@ List<String> _lockedFiles(Directory from, Directory to) {
   return out;
 }
 
-/// Programs that run from inside the app folder (for example a second copy of the app,
-/// or a helper started from it). Best effort: returns an empty list when it cannot tell.
-Future<List<String>> _blockingProcesses(String appDir) async {
-  final dir = appDir.endsWith(_sep) ? appDir : '$appDir$_sep';
-  try {
-    if (Platform.isWindows) {
-      final r = await Process.run(
-        'powershell',
-        [
-          '-NoProfile',
-          '-NonInteractive',
-          '-Command',
-          r"Get-Process | Where-Object { $_.Path -and $_.Path.StartsWith($env:KC_DIR, [StringComparison]::OrdinalIgnoreCase) } | ForEach-Object { $_.ProcessName + ' (' + $_.Id + ')' }",
-        ],
-        environment: {'KC_DIR': dir},
-      ).timeout(const Duration(seconds: 15));
-      return '${r.stdout}'.split(RegExp(r'[\r\n]+')).map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
-    }
-    final out = <String>[];
-    for (final e in Directory('/proc').listSync(followLinks: false).whereType<Directory>()) {
-      final id = int.tryParse(e.path.split('/').last);
-      if (id == null || id == pid) continue;
-      try {
-        final target = Link('${e.path}/exe').targetSync();
-        if (target.startsWith(dir)) out.add('${target.split('/').last} ($id)');
-      } catch (_) {}
-    }
-    return out;
-  } catch (_) {
-    return const [];
-  }
+class _Proc {
+  _Proc(this.id, this.name);
+  final int id;
+  final String name;
+  @override
+  String toString() => '$name ($id)';
 }
 
-/// Native Retry / Cancel box (no Flutter here: the app is closed while we update).
-/// Returns true when the user chose Retry. Without a dialog tool it returns false and the
-/// failure is reported by the app on the next start.
-Future<bool> _askRetry(String title, String message) async {
+/// Programs that run from inside the app folder (for example a second copy of the app,
+/// or a helper started from it), never this updater itself. Best effort: empty when unknown.
+Future<List<_Proc>> _blockingProcesses(String appDir) async {
+  final dir = appDir.endsWith(_sep) ? appDir : '$appDir$_sep';
+  final out = <_Proc>[];
   try {
     if (Platform.isWindows) {
-      const script = r"Add-Type -AssemblyName System.Windows.Forms; "
-          r"$f = New-Object System.Windows.Forms.Form -Property @{TopMost = $true}; "
-          r"$r = [System.Windows.Forms.MessageBox]::Show($f, $env:KC_MSG, $env:KC_TITLE, 'RetryCancel', 'Warning'); "
-          r"if ($r -eq 'Retry') { exit 0 } else { exit 1 }";
-      final r = await Process.run(
-        'powershell',
-        ['-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-Command', script],
-        environment: {'KC_MSG': message, 'KC_TITLE': title},
-      );
-      return r.exitCode == 0;
+      final r = await _powershell(
+        r"Get-Process | Where-Object { $_.Path -and $_.Id -ne [int]$env:KC_SELF -and $_.Path.StartsWith($env:KC_DIR, [StringComparison]::OrdinalIgnoreCase) } | ForEach-Object { $_.Id.ToString() + '|' + $_.ProcessName }",
+        {'KC_DIR': dir, 'KC_SELF': '$pid'},
+      ).timeout(const Duration(seconds: 15));
+      for (final line in '${r.stdout}'.split(RegExp(r'[\r\n]+'))) {
+        final parts = line.trim().split('|');
+        final id = parts.length == 2 ? int.tryParse(parts[0]) : null;
+        if (id != null && id != pid) out.add(_Proc(id, parts[1]));
+      }
+    } else {
+      for (final e in Directory('/proc').listSync(followLinks: false).whereType<Directory>()) {
+        final id = int.tryParse(e.path.split('/').last);
+        if (id == null || id == pid) continue;
+        try {
+          final target = Link('${e.path}/exe').targetSync();
+          if (target.startsWith(dir)) out.add(_Proc(id, target.split('/').last));
+        } catch (_) {}
+      }
+    }
+  } catch (_) {}
+  return out;
+}
+
+/// Runs a PowerShell script (encoded, so no quoting problems); values go in as environment variables.
+Future<ProcessResult> _powershell(String script, Map<String, String> env) {
+  final bytes = <int>[];
+  for (final u in script.codeUnits) {
+    bytes..add(u & 0xff)..add(u >> 8);
+  }
+  return Process.run(
+    'powershell',
+    ['-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-EncodedCommand', base64Encode(bytes)],
+    environment: env,
+  );
+}
+
+/// Close other programs for the user (Force close). Never touches this updater.
+Future<void> _forceClose(List<_Proc> procs) async {
+  for (final p in procs) {
+    if (p.id == pid) continue;
+    _say('force closing $p');
+    try {
+      if (Platform.isWindows) {
+        await Process.run('taskkill', ['/PID', '${p.id}', '/T', '/F']);
+      } else {
+        await Process.run('kill', ['-9', '${p.id}']);
+      }
+    } catch (_) {}
+  }
+  await Future<void>.delayed(const Duration(milliseconds: 1500)); // let Windows release the files
+}
+
+enum _Choice { retry, force, cancel }
+
+/// Native dialog (no Flutter here: the app is closed while we update).
+/// Without a dialog tool it returns cancel and the failure is reported by the app on the next start.
+Future<_Choice> _ask(String title, String message, {required bool canForce}) async {
+  try {
+    if (Platform.isWindows) {
+      final script = [
+        r"Add-Type -AssemblyName System.Windows.Forms",
+        r"[System.Windows.Forms.Application]::EnableVisualStyles()",
+        r"$global:r = 1",
+        r"$f = New-Object System.Windows.Forms.Form",
+        r"$f.Text = $env:KC_TITLE; $f.TopMost = $true; $f.StartPosition = 'CenterScreen'; $f.FormBorderStyle = 'FixedDialog'",
+        r"$f.MaximizeBox = $false; $f.MinimizeBox = $false; $f.ClientSize = New-Object System.Drawing.Size(480, 300)",
+        r"$l = New-Object System.Windows.Forms.Label; $l.Text = $env:KC_MSG",
+        r"$l.Location = New-Object System.Drawing.Point(15, 15); $l.Size = New-Object System.Drawing.Size(450, 230); $f.Controls.Add($l)",
+        r"function Add-Btn($text, $x, $code) { $b = New-Object System.Windows.Forms.Button; $b.Text = $text; $b.Tag = $code",
+        r"  $b.Size = New-Object System.Drawing.Size(140, 32); $b.Location = New-Object System.Drawing.Point($x, 255)",
+        r"  $b.Add_Click({ $global:r = [int]$this.Tag; $this.FindForm().Close() }); $f.Controls.Add($b) }",
+        r"Add-Btn 'Retry' 15 0",
+        r"if ($env:KC_FORCE -eq '1') { Add-Btn 'Force close' 170 2 }",
+        r"Add-Btn 'Cancel' 325 1",
+        r"[void]$f.ShowDialog()",
+        r"exit $global:r",
+      ].join('\n');
+      final r = await _powershell(script, {'KC_MSG': message, 'KC_TITLE': title, 'KC_FORCE': canForce ? '1' : '0'});
+      return r.exitCode == 0 ? _Choice.retry : (r.exitCode == 2 ? _Choice.force : _Choice.cancel);
     }
     if (Platform.isLinux) {
       final zenity = await Process.run('which', ['zenity']);
       if (zenity.exitCode == 0) {
         final r = await Process.run('zenity', [
           '--question', '--title=$title', '--text=$message',
-          '--ok-label=Retry', '--cancel-label=Cancel', '--width=420',
+          '--ok-label=Retry', '--cancel-label=Cancel',
+          if (canForce) '--extra-button=Force close',
+          '--width=460',
         ]);
-        return r.exitCode == 0;
+        if ('${r.stdout}'.contains('Force close')) return _Choice.force;
+        return r.exitCode == 0 ? _Choice.retry : _Choice.cancel;
       }
       final kdialog = await Process.run('which', ['kdialog']);
       if (kdialog.exitCode == 0) {
+        // kdialog: yes = first button, no = second, cancel = third
         final r = await Process.run('kdialog', [
-          '--title', title, '--warningcontinuecancel', message,
-          '--continue-label', 'Retry', '--cancel-label', 'Cancel',
+          '--title', title,
+          if (canForce) ...['--yes-label', 'Force close', '--no-label', 'Retry', '--cancel-label', 'Cancel', '--yesnocancel', message]
+          else ...['--yes-label', 'Retry', '--no-label', 'Cancel', '--yesno', message],
         ]);
-        return r.exitCode == 0;
+        if (canForce) return r.exitCode == 0 ? _Choice.force : (r.exitCode == 1 ? _Choice.retry : _Choice.cancel);
+        return r.exitCode == 0 ? _Choice.retry : _Choice.cancel;
       }
     }
   } catch (_) {}
-  return false;
+  return _Choice.cancel;
 }
 
 /// Wait until the files we must replace are free. If another program keeps them locked, tell the
-/// user which one and let them close it and retry. Nothing is copied until everything is free,
-/// so a blocked update never leaves a half-updated app.
+/// user which one and let them close it and retry, or force close it. Nothing is copied until
+/// everything is free, so a blocked update never leaves a half-updated app.
 Future<void> _waitForUnlocked(Directory from, Directory to) async {
   var asked = 0;
   while (true) {
@@ -216,15 +274,18 @@ Future<void> _waitForUnlocked(Directory from, Directory to) async {
     final more = locked.length > 4 ? '\n... and ${locked.length - 4} more' : '';
     final who = procs.isEmpty
         ? 'Close any other program that is using Khmer Calendar files (including another copy of the app).'
-        : 'Please close: ${procs.join(', ')}';
-    final retry = asked < 5 &&
-        await _askRetry(
-          'Khmer Calendar update',
-          'The update could not be installed because some app files are in use by a running program.\n\n'
-              '$who\n\nFiles in use:\n$shown$more\n\nClick Retry after closing it, or Cancel to keep the current version.',
-        );
+        : 'Please close: ${procs.join(', ')}\nOr click Force close and the updater will close it for you (unsaved work in it is lost).';
+    final choice = asked >= 5
+        ? _Choice.cancel
+        : await _ask(
+            'Khmer Calendar update',
+            'The update could not be installed because some app files are in use by a running program.\n\n'
+                '$who\n\nFiles in use:\n$shown$more\n\nClick Retry after closing it, or Cancel to keep the current version.',
+            canForce: procs.isNotEmpty,
+          );
     asked++;
-    if (!retry) throw _Blocked(locked, procs);
+    if (choice == _Choice.cancel) throw _Blocked(locked, procs.map((e) => '$e').toList());
+    if (choice == _Choice.force) await _forceClose(procs);
   }
 }
 
@@ -278,6 +339,10 @@ Future<void> _copyOver(Directory from, Directory to, String exe) async {
   for (final f in files) {
     final rel = f.path.substring(from.path.length + 1);
     final dest = File('${to.path}$_sep$rel');
+    if (_isSelf(dest.path)) {
+      _say('skipping the running updater: $rel');
+      continue;
+    }
     dest.parent.createSync(recursive: true);
     for (var attempt = 1;; attempt++) {
       try {

@@ -18,4 +18,6 @@ Future<void> finishUpdateInstall() async {}
 
 Future<UpdateFailure?> takeUpdateFailure() async => null;
 
-Future<List<String>> otherAppInstances() async => const [];
+Future<List<AppInstance>> otherAppInstances() async => const [];
+
+Future<void> forceCloseInstances(List<AppInstance> instances) async {}

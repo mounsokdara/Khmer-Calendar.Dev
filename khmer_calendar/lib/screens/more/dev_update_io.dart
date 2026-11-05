@@ -587,20 +587,43 @@ Future<UpdateFailure?> takeUpdateFailure() async {
 
 /// Other running copies of this app (same executable name, different process id). They keep the
 /// app files locked and block an update, so we warn before the app closes. Best effort.
-Future<List<String>> otherAppInstances() async {
+Future<List<AppInstance>> otherAppInstances() async {
   try {
     final exe = Platform.resolvedExecutable;
     final name = exe.substring(exe.lastIndexOf(Platform.pathSeparator) + 1);
+    final out = <AppInstance>[];
     if (Platform.isWindows) {
       final r = await Process.run('tasklist', ['/FI', 'IMAGENAME eq $name', '/NH', '/FO', 'CSV']);
-      final ids = RegExp(r'"[^"]+","(\d+)"').allMatches('${r.stdout}').map((m) => int.parse(m.group(1)!));
-      return ids.where((id) => id != pid).map((id) => '$name ($id)').toList();
-    }
-    if (Platform.isLinux || Platform.isMacOS) {
+      // One line per process: "image name","pid","session name","session #","memory". Only the first two fields count
+      // (the session number is also a quoted number, which is what used to show up as a fake "copy").
+      for (final line in '${r.stdout}'.split(RegExp(r'[\r\n]+'))) {
+        final m = RegExp(r'^"([^"]+)","(\d+)"').firstMatch(line.trim());
+        if (m == null || m.group(1)!.toLowerCase() != name.toLowerCase()) continue;
+        final id = int.parse(m.group(2)!);
+        if (id != pid) out.add(AppInstance(name, id));
+      }
+    } else if (Platform.isLinux || Platform.isMacOS) {
       final r = await Process.run('pgrep', ['-x', name]);
-      final ids = '${r.stdout}'.split('\n').map(int.tryParse).whereType<int>();
-      return ids.where((id) => id != pid).map((id) => '$name ($id)').toList();
+      for (final id in '${r.stdout}'.split('\n').map((e) => int.tryParse(e.trim())).whereType<int>()) {
+        if (id != pid) out.add(AppInstance(name, id));
+      }
     }
+    return out;
   } catch (_) {}
   return const [];
+}
+
+/// Force close the given copies (never this process).
+Future<void> forceCloseInstances(List<AppInstance> instances) async {
+  for (final i in instances) {
+    if (i.id == pid) continue;
+    try {
+      if (Platform.isWindows) {
+        await Process.run('taskkill', ['/PID', '${i.id}', '/T', '/F']);
+      } else {
+        await Process.run('kill', ['-9', '${i.id}']);
+      }
+    } catch (_) {}
+  }
+  await Future<void>.delayed(const Duration(milliseconds: 1200)); // let the system release the files
 }

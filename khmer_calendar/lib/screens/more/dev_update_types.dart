@@ -70,3 +70,12 @@ class UpdateFailure {
 
   bool get isLocked => reason == 'locked';
 }
+
+/// Another running copy of the app (it keeps the app files locked and blocks an update).
+class AppInstance {
+  const AppInstance(this.name, this.id);
+  final String name;
+  final int id;
+  @override
+  String toString() => '$name ($id)';
+}

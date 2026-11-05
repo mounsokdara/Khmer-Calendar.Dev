@@ -203,23 +203,27 @@ Future<void> _install(BuildContext context, Lang lang, String path, UpdateBuild 
     final others = await otherAppInstances();
     if (!context.mounted) return;
     if (others.isNotEmpty) {
-      final go = await showDialog<bool>(
+      final choice = await showDialog<String>(
         context: context,
         barrierDismissible: false,
         builder: (d) => AlertDialog(
           title: Text(_s(lang, 'មានកម្មវិធីកំពុងដំណើរការ', 'Another copy is running')),
           content: Text(_s(
             lang,
-            'មានប្រតិទិនខ្មែរមួយទៀតកំពុងបើក (${others.join(', ')})។ វាអាចរារាំងការធ្វើបច្ចុប្បន្នភាព។ សូមបិទវាសិន រួចចុច «ព្យាយាមម្តងទៀត»។',
-            'Another copy of Khmer Calendar is running (${others.join(', ')}). It can block the update. Close it, then tap Retry.',
+            'មានប្រតិទិនខ្មែរមួយទៀតកំពុងបើក (${others.join(', ')})។ វាអាចរារាំងការធ្វើបច្ចុប្បន្នភាព។ សូមបិទវាសិន រួចចុច «ព្យាយាមម្តងទៀត» ឬចុច «បង្ខំបិទ» ដើម្បីបិទវាឲ្យ (ការងារមិនទាន់រក្សាទុកនឹងបាត់)។',
+            'Another copy of Khmer Calendar is running (${others.join(', ')}). It can block the update. Close it and tap Retry, or tap Force close to close it for you (unsaved work in it is lost).',
           )),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(d, false), child: Text(_s(lang, 'បោះបង់', 'Cancel'))),
-            FilledButton(onPressed: () => Navigator.pop(d, true), child: Text(_s(lang, 'ព្យាយាមម្តងទៀត', 'Retry'))),
+            TextButton(onPressed: () => Navigator.pop(d, 'cancel'), child: Text(_s(lang, 'បោះបង់', 'Cancel'))),
+            TextButton(onPressed: () => Navigator.pop(d, 'force'), child: Text(_s(lang, 'បង្ខំបិទ', 'Force close'))),
+            FilledButton(onPressed: () => Navigator.pop(d, 'retry'), child: Text(_s(lang, 'ព្យាយាមម្តងទៀត', 'Retry'))),
           ],
         ),
       );
-      if (go == true && context.mounted) await _install(context, lang, path, build);
+      if (choice == 'cancel' || choice == null || !context.mounted) return;
+      if (choice == 'force') await forceCloseInstances(others);
+      if (!context.mounted) return;
+      await _install(context, lang, path, build); // check again (Retry) or continue (after Force close)
       return;
     }
   }
