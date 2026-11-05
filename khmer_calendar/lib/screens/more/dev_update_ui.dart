@@ -41,7 +41,7 @@ Future<void> _message(BuildContext context, Lang lang, String title, String body
 }
 
 /// "Check for updates": finds the release tag that matches version.txt, downloads the package for this
-/// device inside the app and opens the system installer. No browser required.
+/// device inside the app and opens the system installer / desktop updater. No browser required.
 Future<void> runInAppUpdateCheck(BuildContext context, Lang lang) async {
   if (NetStatus.isOffline) {
     await _message(context, lang, _s(lang, 'ពិនិត្យកំណែថ្មី', 'Check for updates'), t(lang, 'downloadOffline'));
@@ -75,7 +75,13 @@ Future<void> runInAppUpdateCheck(BuildContext context, Lang lang) async {
 
   final title = _s(lang, 'កំណែថ្មី', 'Updates');
   if (error != null) {
-    await _message(context, lang, title, _s(lang, 'មិនអាចពិនិត្យកំណែថ្មីបានទេ។', 'Unable to check for updates.'));
+    final detail = error is UpdateException ? error.message : error.toString();
+    await _message(
+      context,
+      lang,
+      title,
+      _s(lang, 'មិនអាចពិនិត្យកំណែថ្មីបានទេ។\n\n$detail', 'Unable to check for updates.\n\n$detail'),
+    );
     return;
   }
   if (build == null) {
@@ -83,8 +89,11 @@ Future<void> runInAppUpdateCheck(BuildContext context, Lang lang) async {
       context,
       lang,
       title,
-      _s(lang, 'មិនទាន់មានកំណែសម្រាប់ឧបករណ៍របស់អ្នកទេ។ ប្រហែលកំពុងបង្កើត សូមព្យាយាមម្តងទៀតបន្តិចទៀត។',
-          'No build for your device yet. It may still be publishing, try again in a few minutes.'),
+      _s(
+        lang,
+        'មិនទាន់មានកំណែសម្រាប់ឧបករណ៍របស់អ្នកទេ។ ប្រហែលកំពុងបង្កើត សូមព្យាយាមម្តងទៀតបន្តិចទៀត។',
+        'No build for your device yet. It may still be publishing, try again in a few minutes.',
+      ),
     );
     return;
   }
@@ -160,22 +169,27 @@ Future<void> _downloadAndInstall(BuildContext context, Lang lang, UpdateBuild bu
     );
   } on UpdateCancelled {
     progress.dispose();
-    return; // the dialog was already closed by Cancel
+    return;
   } catch (e) {
     error = e;
   }
   progress.dispose();
 
   if (cancelled) return;
-  if (context.mounted) Navigator.of(context).pop(); // close the progress dialog
+  if (context.mounted) Navigator.of(context).pop();
   if (!context.mounted) return;
 
   if (error != null || path == null) {
+    final detail = error is UpdateException ? error.message : (error?.toString() ?? '');
     await _message(
       context,
       lang,
       _s(lang, 'កំណែថ្មី', 'Updates'),
-      _s(lang, 'ការទាញយកមិនបានសម្រេច។ សូមព្យាយាមម្តងទៀត។', 'The download did not finish. Please try again.'),
+      _s(
+        lang,
+        'ការទាញយកមិនបានសម្រេច។${detail.isEmpty ? '' : '\n\n$detail'}',
+        'The download did not finish.${detail.isEmpty ? '' : '\n\n$detail'}',
+      ),
       extra: [_browserButton(lang, build.versionName)],
     );
     return;
@@ -188,7 +202,6 @@ Future<void> _install(BuildContext context, Lang lang, String path, UpdateBuild 
   if (!context.mounted) return;
 
   if (result == UpdateInstallResult.started) {
-    // Desktop: the updater is waiting for this app to quit; it swaps the files and starts the new version.
     if (updateRestartsApp) {
       showDialog<void>(
         context: context,
@@ -199,7 +212,9 @@ Future<void> _install(BuildContext context, Lang lang, String path, UpdateBuild 
             children: [
               const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.2)),
               const SizedBox(width: 16),
-              Flexible(child: Text(_s(lang, 'កំពុងធ្វើបច្ចុប្បន្នភាព កម្មវិធីនឹងចាប់ផ្តើមឡើងវិញ…', 'Updating, the app will restart…'))),
+              Flexible(
+                child: Text(_s(lang, 'កំពុងធ្វើបច្ចុប្បន្នភាព កម្មវិធីនឹងចាប់ផ្តើមឡើងវិញ…', 'Updating, the app will restart…')),
+              ),
             ],
           ),
         ),
@@ -214,8 +229,11 @@ Future<void> _install(BuildContext context, Lang lang, String path, UpdateBuild 
       context,
       lang,
       _s(lang, 'កំណែថ្មី', 'Updates'),
-      _s(lang, 'មិនអាចសរសេរក្នុងថតកម្មវិធីបានទេ (ឧទាហរណ៍ Program Files)។ សូមផ្លាស់ទីកម្មវិធីទៅថតផ្សេង ឬធ្វើបច្ចុប្បន្នភាពដោយដៃ។',
-          'The app folder is read-only (for example Program Files). Move the app to a folder you can write to, or update manually.'),
+      _s(
+        lang,
+        'មិនអាចសរសេរក្នុងថតកម្មវិធីបានទេ (ឧទាហរណ៍ Program Files)។ សូមផ្លាស់ទីកម្មវិធីទៅថតផ្សេង ឬធ្វើបច្ចុប្បន្នភាពដោយដៃ។',
+        'The app folder is read-only (for example Program Files). Move the app to a folder you can write to, or update manually.',
+      ),
       extra: [_browserButton(lang, build.versionName)],
     );
     return;
