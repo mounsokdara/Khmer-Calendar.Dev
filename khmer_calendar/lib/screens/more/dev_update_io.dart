@@ -11,14 +11,12 @@ import 'dev_update_types.dart';
 
 const _channel = MethodChannel('khmer.permissions');
 
-/// Android (not the F-Droid build, F-Droid updates the app itself) and the three desktop systems.
 final bool inAppUpdateSupported =
     (Platform.isAndroid && !const bool.fromEnvironment('FDROID')) ||
     Platform.isWindows ||
     Platform.isLinux ||
     Platform.isMacOS;
 
-/// Desktop: installing closes the app; the updater program swaps the files and starts it again.
 final bool updateRestartsApp = Platform.isWindows || Platform.isLinux || Platform.isMacOS;
 
 const _packageByDigit = <int, String>{0: 'universal', 1: 'arm32', 2: 'arm64', 3: 'x64', 4: 'arm32_64'};
@@ -62,10 +60,17 @@ const _sslCertHint =
     'Check the date/time is correct, open https://github.com in a browser once, '
     'or turn off antivirus HTTPS scanning, then try again.';
 
-/// Path to curl that uses the OS certificate store (Schannel on Windows).
+String _joinPath(List<String> parts) => parts.where((p) => p.isNotEmpty).join(Platform.pathSeparator);
+
+String _winSystem32(String exeName) {
+  final root = Platform.environment['SystemRoot'];
+  final base = (root == null || root.isEmpty) ? _joinPath(['C:', 'Windows']) : root;
+  return _joinPath([base, 'System32', exeName]);
+}
+
 String? _curlPath() {
   if (Platform.isWindows) {
-    final p = '${Platform.environment['SystemRoot'] ?? r'C:\Windows'}\System32\curl.exe';
+    final p = _winSystem32('curl.exe');
     if (File(p).existsSync()) return p;
     return 'curl.exe';
   }
@@ -73,7 +78,6 @@ String? _curlPath() {
   return null;
 }
 
-/// GET body via system curl (Windows Schannel / system CA store). Returns null if curl is missing or fails.
 Future<({int status, String body})?> _curlGet(String url, {Map<String, String>? headers}) async {
   final curl = _curlPath();
   if (curl == null) return null;
@@ -103,7 +107,6 @@ Future<({int status, String body})?> _curlGet(String url, {Map<String, String>? 
   }
 }
 
-/// Download a file with system curl. Returns true on success.
 Future<bool> _curlDownload(
   String url,
   File target, {
@@ -300,7 +303,7 @@ Future<UpdateBuild?> fetchUpdateBuild() async {
 }
 
 Future<File> _stampFile() async =>
-    File('${(await getApplicationSupportDirectory()).path}${Platform.pathSeparator}updatebuild.json');
+    File(_joinPath([(await getApplicationSupportDirectory()).path, 'updatebuild.json']));
 
 Future<DateTime?> _readStamp() async {
   try {
@@ -384,21 +387,44 @@ Future<Directory> _downloadDir() async {
     if (p == null) throw const UpdateException('No download folder');
     return Directory(p);
   }
-  return Directory('${Directory.systemTemp.path}${Platform.pathSeparator}khmer_update_dl');
+  return Directory(_joinPath([Directory.systemTemp.path, 'khmer_update_dl']));
 }
 
 Future<void> _extractUpdaterFromPackage(String archivePath, String updaterName) async {
   if (updaterName.isEmpty) return;
   final dir = File(archivePath).parent.path;
-  final sep = Platform.pathSeparator;
-  final out = File('$dir$sep$updaterName');
+  final out = File(_joinPath([dir, updaterName]));
   if (out.existsSync()) out.deleteSync();
 
   if (Platform.isWindows) {
-    final tar = '${Platform.environment['SystemRoot'] ?? r'C:\Windows'}\System32\tar.exe';
-    final r = await Process.run(tar, ['-xf', archivePath, '-C', dir, updaterName]);
-    if (r.exitCode != 0 || !out.existsSync()) {
-      throw UpdateException('Package is missing the updater ($updaterName)');
+    final tar = _winSystem32('tar.exe');
+    if (File(tar).existsSync()) {
+      final r = await Process.run(tar, ['-xf', archivePath, '-C', dir, updaterName]);
+      if (r.exitCode == 0 && out.existsSync()) return;
+    }
+    final script = [
+      "\$ErrorActionPreference = 'Stop'",
+      'Add-Type -AssemblyName System.IO.Compression.FileSystem',
+      '\$zipPath = \$args[0]',
+      '\$entryName = \$args[1]',
+      '\$outPath = \$args[2]',
+      '\$z = [System.IO.Compression.ZipFile]::OpenRead(\$zipPath)',
+      'try {',
+      '  \$e = \$z.Entries | Where-Object { \$_.Name -eq \$entryName } | Select-Object -First 1',
+      '  if (\$null -eq \$e) { throw "Package is missing \$entryName" }',
+      '  if (Test-Path -LiteralPath \$outPath) { Remove-Item -LiteralPath \$outPath -Force }',
+      '  [System.IO.Compression.ZipFileExtensions]::ExtractToFile(\$e, \$outPath, \$true)',
+      '} finally { \$z.Dispose() }',
+    ].join('; ');
+    final ps = await Process.run(
+      'powershell',
+      ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', script, '--%', archivePath, updaterName, out.path],
+    );
+    if (ps.exitCode != 0 || !out.existsSync()) {
+      final err = '${ps.stderr}'.trim();
+      throw UpdateException(
+        err.isEmpty ? 'Package is missing the updater ($updaterName)' : 'Could not extract updater: $err',
+      );
     }
   } else if (Platform.isLinux) {
     final r = await Process.run('tar', ['-xzf', archivePath, '-C', dir, './$updaterName', updaterName]);
@@ -411,7 +437,7 @@ Future<void> _extractUpdaterFromPackage(String archivePath, String updaterName) 
     try {
       final attach = await Process.run('hdiutil', ['attach', '-nobrowse', '-readonly', '-mountpoint', mnt.path, archivePath]);
       if (attach.exitCode != 0) throw const UpdateException('Could not open the disk image');
-      final src = File('${mnt.path}$sep$updaterName');
+      final src = File(_joinPath([mnt.path, updaterName]));
       if (!src.existsSync()) throw UpdateException('Package is missing the updater ($updaterName)');
       src.copySync(out.path);
       await Process.run('chmod', ['+x', out.path]);
@@ -432,9 +458,8 @@ Future<String> downloadUpdateBuild(
   final dir = await _downloadDir();
   if (dir.existsSync()) dir.deleteSync(recursive: true);
   dir.createSync(recursive: true);
-  final sep = Platform.pathSeparator;
 
-  final target = File('${dir.path}$sep${build.assetName}');
+  final target = File(_joinPath([dir.path, build.assetName]));
   await _fetchTo(build.url, target, build.size, onProgress, isCancelled);
 
   if (build.updaterName.isNotEmpty) {
@@ -445,7 +470,7 @@ Future<String> downloadUpdateBuild(
 
 bool _writable(Directory d) {
   try {
-    final probe = File('${d.path}${Platform.pathSeparator}.khmer_write_test');
+    final probe = File(_joinPath([d.path, '.khmer_write_test']));
     probe.writeAsStringSync('x');
     probe.deleteSync();
     return true;
@@ -486,7 +511,7 @@ Future<UpdateInstallResult> installUpdateBuild(String path, UpdateBuild build) a
       if (!_writable(Directory(target))) return UpdateInstallResult.notWritable;
     }
 
-    final updater = '${File(path).parent.path}$sep${build.updaterName}';
+    final updater = _joinPath([File(path).parent.path, build.updaterName]);
     if (!File(updater).existsSync()) return UpdateInstallResult.failed;
     final stamp = (await _stampFile()).path;
     final common = [
