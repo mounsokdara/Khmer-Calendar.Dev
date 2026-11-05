@@ -43,8 +43,12 @@ class UpdateBuild {
   /// True when this build is newer than what is installed.
   final bool isNewer;
 
-  /// Desktop only: the small updater program that swaps the files after the app quits.
+  /// Desktop only: small updater program (separate release asset preferred).
+  /// e.g. `update-windows-x64.exe`, `update-linux-x64`, `update-macos.sh`.
   final String updaterName;
+
+  /// Direct download URL for [updaterName]. Empty on older releases that only
+  /// shipped the updater inside the package (then the app extracts it).
   final String updaterUrl;
 }
 

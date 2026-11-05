@@ -53,13 +53,14 @@ String? _parseVersionName(String text) {
 }
 
 /// Looks up the build for this device from the release tag that matches version.txt.
-/// Returns null when that release has no package for this device (or does not exist yet).
-/// Desktop packages ship the updater inside the archive (not as a separate release asset).
+/// Desktop: the updater is a separate release asset (downloaded on its own). Older releases
+/// that only shipped the updater inside the package still work via extract fallback.
 Future<UpdateBuild?> fetchUpdateBuild() async {
   late String package;
   late String assetName;
   String? fallbackPackage; // Windows on ARM runs the x64 build through emulation
   var updaterName = '';
+  var legacyUpdaterName = ''; // name inside old packages
   DateTime? installedAt;
 
   if (Platform.isAndroid) {
@@ -76,16 +77,19 @@ Future<UpdateBuild?> fetchUpdateBuild() async {
       package = arch!;
       assetName = 'KhmerCalendar-windows-$arch.zip';
       if (arch == 'arm64') fallbackPackage = 'x64';
-      updaterName = 'update-windows.exe';
+      updaterName = 'update-windows-$arch.exe';
+      legacyUpdaterName = 'update-windows.exe';
     } else if (Platform.isLinux) {
       if (arch != 'x64' && arch != 'arm64') return null;
       package = arch!;
       assetName = 'KhmerCalendar-linux-$arch.tar.gz';
       updaterName = 'update-linux-$arch';
+      legacyUpdaterName = updaterName;
     } else {
       package = arch == 'x64' ? 'x86_64' : (arch == 'arm64' ? 'arm64' : 'universal');
       assetName = 'KhmerCalendar-macos-$package.dmg';
       updaterName = 'update-macos.sh';
+      legacyUpdaterName = updaterName;
     }
     installedAt = await _readStamp();
   }
@@ -114,8 +118,23 @@ Future<UpdateBuild?> fetchUpdateBuild() async {
     package = fallbackPackage;
     assetName = 'KhmerCalendar-windows-$package.zip';
     asset = find(assetName);
+    if (Platform.isWindows) {
+      updaterName = 'update-windows-$package.exe';
+    }
   }
   if (asset == null) return null;
+
+  // Prefer a separate updater asset; fall back to the one inside the package on older releases.
+  var updaterAsset = updaterName.isEmpty ? null : find(updaterName);
+  if (updaterAsset == null && Platform.isWindows) {
+    // Shared name, or x64 updater under emulation on ARM.
+    updaterAsset = find('update-windows.exe') ?? find('update-windows-x64.exe');
+    if (updaterAsset != null) updaterName = updaterAsset['name'] as String;
+  }
+  final updaterUrl = (updaterAsset?['browser_download_url'] as String?) ?? '';
+  if (updaterUrl.isEmpty && legacyUpdaterName.isNotEmpty) {
+    updaterName = legacyUpdaterName; // extract this name from the package later
+  }
 
   final builtAt = DateTime.parse(asset['updated_at'] as String).toUtc();
   final sha = RegExp(r'\(([0-9a-fA-F]{7,40})\)').firstMatch('${release['name'] ?? ''}')?.group(1) ?? '';
@@ -131,7 +150,7 @@ Future<UpdateBuild?> fetchUpdateBuild() async {
     sha: sha,
     isNewer: newerByVersion || newerByTime,
     updaterName: updaterName,
-    updaterUrl: '', // updater is inside the package file
+    updaterUrl: updaterUrl,
   );
 }
 
@@ -200,7 +219,7 @@ Future<Directory> _downloadDir() async {
   return Directory('${Directory.systemTemp.path}${Platform.pathSeparator}khmer_update_dl');
 }
 
-/// Pulls [updaterName] out of the downloaded package so install can run it before the archive is applied.
+/// Legacy path: pull the updater out of the package when no separate asset exists.
 Future<void> _extractUpdaterFromPackage(String archivePath, String updaterName) async {
   if (updaterName.isEmpty) return;
   final dir = File(archivePath).parent.path;
@@ -238,7 +257,7 @@ Future<void> _extractUpdaterFromPackage(String archivePath, String updaterName) 
   }
 }
 
-/// Downloads [build] and, on desktop, extracts the updater from inside the package.
+/// Downloads the package and, on desktop, the updater executable as its own file.
 Future<String> downloadUpdateBuild(
   UpdateBuild build,
   void Function(int received, int total) onProgress, {
@@ -249,10 +268,20 @@ Future<String> downloadUpdateBuild(
   dir.createSync(recursive: true);
   final sep = Platform.pathSeparator;
 
+  // Updater first (small), then the package with progress.
+  if (build.updaterName.isNotEmpty && build.updaterUrl.isNotEmpty) {
+    final updaterFile = File('${dir.path}$sep${build.updaterName}');
+    await _fetchTo(build.updaterUrl, updaterFile, 0, null, isCancelled);
+    if (!Platform.isWindows) {
+      await Process.run('chmod', ['+x', updaterFile.path]);
+    }
+  }
+
   final target = File('${dir.path}$sep${build.assetName}');
   await _fetchTo(build.url, target, build.size, onProgress, isCancelled);
 
-  if (build.updaterName.isNotEmpty) {
+  // Older releases: no separate updater asset → take it from the package.
+  if (build.updaterName.isNotEmpty && build.updaterUrl.isEmpty) {
     await _extractUpdaterFromPackage(target.path, build.updaterName);
   }
   return target.path;
@@ -270,8 +299,7 @@ bool _writable(Directory d) {
 }
 
 /// Android: opens the system installer for the downloaded APK.
-/// Desktop: starts the updater extracted from the package. The updater closes this app,
-/// replaces the files, then restarts the app.
+/// Desktop: starts the downloaded updater. The updater closes this app, replaces files, restarts.
 Future<UpdateInstallResult> installUpdateBuild(String path, UpdateBuild build) async {
   if (Platform.isAndroid) {
     try {
