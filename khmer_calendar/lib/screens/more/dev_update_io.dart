@@ -94,7 +94,7 @@ Future<UpdateBuild?> fetchUpdateBuild() async {
       .get(Uri.parse('$updateVersionFileUrl?cb=${DateTime.now().millisecondsSinceEpoch}'))
       .timeout(const Duration(seconds: 12));
   if (verRes.statusCode != 200) throw UpdateException('version.txt answered ${verRes.statusCode}');
-  final versionName = _parseVersionName(verRes.body);
+  final versionName = _parseVersionName(text);
   if (versionName == null || versionName.isEmpty) throw const UpdateException('version.txt has no versionName');
 
   final tag = 'v$versionName';
@@ -270,7 +270,8 @@ bool _writable(Directory d) {
 }
 
 /// Android: opens the system installer for the downloaded APK.
-/// Desktop: starts the updater extracted from the package, which waits for this app to quit, swaps the files and restarts it.
+/// Desktop: starts the updater extracted from the package. The updater closes this app,
+/// replaces the files, then restarts the app.
 Future<UpdateInstallResult> installUpdateBuild(String path, UpdateBuild build) async {
   if (Platform.isAndroid) {
     try {
@@ -314,9 +315,31 @@ Future<UpdateInstallResult> installUpdateBuild(String path, UpdateBuild build) a
       '--built-at', build.builtAt.toIso8601String(),
       '--sha', build.sha,
     ];
-    final cmd = Platform.isMacOS ? '/bin/bash' : updater;
-    final args = Platform.isMacOS ? [updater, ...common] : ['--exe', exeName, ...common];
-    await Process.start(cmd, args, mode: ProcessStartMode.detached);
+
+    if (Platform.isWindows) {
+      // `start /B` fully detaches so the updater keeps running after this process exits.
+      final args = ['/c', 'start', '', '/B', updater, '--exe', exeName, ...common];
+      await Process.start(
+        'cmd',
+        args,
+        workingDirectory: File(updater).parent.path,
+        mode: ProcessStartMode.detached,
+      );
+    } else if (Platform.isMacOS) {
+      await Process.start(
+        '/bin/bash',
+        [updater, ...common],
+        workingDirectory: File(updater).parent.path,
+        mode: ProcessStartMode.detached,
+      );
+    } else {
+      await Process.start(
+        updater,
+        ['--exe', exeName, ...common],
+        workingDirectory: File(updater).parent.path,
+        mode: ProcessStartMode.detached,
+      );
+    }
     return UpdateInstallResult.started;
   } catch (_) {
     return UpdateInstallResult.failed;
@@ -325,6 +348,8 @@ Future<UpdateInstallResult> installUpdateBuild(String path, UpdateBuild build) a
 
 Future<void> finishUpdateInstall() async {
   if (!updateRestartsApp) return;
-  await Future<void>.delayed(const Duration(milliseconds: 900));
+  // Give the updater a moment to start, then exit. The updater will also force-close
+  // this process if it is still alive, then replace files and restart the app.
+  await Future<void>.delayed(const Duration(milliseconds: 1200));
   exit(0);
 }
