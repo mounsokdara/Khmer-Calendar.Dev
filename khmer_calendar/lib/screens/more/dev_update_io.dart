@@ -21,7 +21,6 @@ final bool inAppUpdateSupported =
 /// Desktop: installing closes the app; the updater program swaps the files and starts it again.
 final bool updateRestartsApp = Platform.isWindows || Platform.isLinux || Platform.isMacOS;
 
-// Last digit of the Android versionCode says which package is installed (see build.gradle.kts).
 const _packageByDigit = <int, String>{0: 'universal', 1: 'arm32', 2: 'arm64', 3: 'x64', 4: 'arm32_64'};
 
 const _headers = {'Accept': 'application/vnd.github+json', 'User-Agent': 'khmer-calendar-updater'};
@@ -46,21 +45,18 @@ int _compareVersions(String a, String b) {
   return 0;
 }
 
-/// Reads versionName from a version.txt body, or null if missing.
 String? _parseVersionName(String text) {
   final m = RegExp(r'^\s*versionName\s*=\s*(\S+)\s*$', multiLine: true).firstMatch(text);
   return m?.group(1);
 }
 
 /// Looks up the build for this device from the release tag that matches version.txt.
-/// Desktop: the updater is a separate release asset (downloaded on its own). Older releases
-/// that only shipped the updater inside the package still work via extract fallback.
+/// Desktop packages include the updater binary inside the archive (not a separate release asset).
 Future<UpdateBuild?> fetchUpdateBuild() async {
   late String package;
   late String assetName;
-  String? fallbackPackage; // Windows on ARM runs the x64 build through emulation
+  String? fallbackPackage;
   var updaterName = '';
-  var legacyUpdaterName = ''; // name inside old packages
   DateTime? installedAt;
 
   if (Platform.isAndroid) {
@@ -71,25 +67,29 @@ Future<UpdateBuild?> fetchUpdateBuild() async {
     package = _packageByDigit[versionCode % 10] ?? 'universal';
     assetName = 'KhmerCalendar-$package.apk';
   } else {
-    final arch = deviceArch(); // arm64 | x64 | arm32 | null
+    final arch = deviceArch();
+    if (arch == null) {
+      throw const UpdateException('Could not detect CPU architecture');
+    }
     if (Platform.isWindows) {
-      if (arch != 'x64' && arch != 'arm64') return null;
-      package = arch!;
+      if (arch != 'x64' && arch != 'arm64') {
+        throw UpdateException('Unsupported Windows architecture: $arch');
+      }
+      package = arch;
       assetName = 'KhmerCalendar-windows-$arch.zip';
       if (arch == 'arm64') fallbackPackage = 'x64';
-      updaterName = 'update-windows-$arch.exe';
-      legacyUpdaterName = 'update-windows.exe';
+      updaterName = 'update-windows.exe';
     } else if (Platform.isLinux) {
-      if (arch != 'x64' && arch != 'arm64') return null;
-      package = arch!;
+      if (arch != 'x64' && arch != 'arm64') {
+        throw UpdateException('Unsupported Linux architecture: $arch');
+      }
+      package = arch;
       assetName = 'KhmerCalendar-linux-$arch.tar.gz';
       updaterName = 'update-linux-$arch';
-      legacyUpdaterName = updaterName;
     } else {
       package = arch == 'x64' ? 'x86_64' : (arch == 'arm64' ? 'arm64' : 'universal');
       assetName = 'KhmerCalendar-macos-$package.dmg';
       updaterName = 'update-macos.sh';
-      legacyUpdaterName = updaterName;
     }
     installedAt = await _readStamp();
   }
@@ -97,16 +97,24 @@ Future<UpdateBuild?> fetchUpdateBuild() async {
   final verRes = await http
       .get(Uri.parse('$updateVersionFileUrl?cb=${DateTime.now().millisecondsSinceEpoch}'))
       .timeout(const Duration(seconds: 12));
-  if (verRes.statusCode != 200) throw UpdateException('version.txt answered ${verRes.statusCode}');
+  if (verRes.statusCode != 200) {
+    throw UpdateException('Could not read version.txt (${verRes.statusCode})');
+  }
   final versionName = _parseVersionName(verRes.body);
-  if (versionName == null || versionName.isEmpty) throw const UpdateException('version.txt has no versionName');
+  if (versionName == null || versionName.isEmpty) {
+    throw const UpdateException('version.txt has no versionName');
+  }
 
   final tag = 'v$versionName';
   final res = await http
       .get(Uri.parse('https://api.github.com/repos/$updateRepo/releases/tags/$tag'), headers: _headers)
       .timeout(const Duration(seconds: 12));
-  if (res.statusCode == 404) return null;
-  if (res.statusCode != 200) throw UpdateException('GitHub answered ${res.statusCode}');
+  if (res.statusCode == 404) {
+    throw UpdateException('Release $tag not found yet');
+  }
+  if (res.statusCode != 200) {
+    throw UpdateException('GitHub answered ${res.statusCode}');
+  }
 
   final release = jsonDecode(res.body) as Map<String, dynamic>;
   final assets = (release['assets'] as List? ?? const []).cast<Map<String, dynamic>>();
@@ -118,22 +126,10 @@ Future<UpdateBuild?> fetchUpdateBuild() async {
     package = fallbackPackage;
     assetName = 'KhmerCalendar-windows-$package.zip';
     asset = find(assetName);
-    if (Platform.isWindows) {
-      updaterName = 'update-windows-$package.exe';
-    }
   }
-  if (asset == null) return null;
-
-  // Prefer a separate updater asset; fall back to the one inside the package on older releases.
-  var updaterAsset = updaterName.isEmpty ? null : find(updaterName);
-  if (updaterAsset == null && Platform.isWindows) {
-    // Shared name, or x64 updater under emulation on ARM.
-    updaterAsset = find('update-windows.exe') ?? find('update-windows-x64.exe');
-    if (updaterAsset != null) updaterName = updaterAsset['name'] as String;
-  }
-  final updaterUrl = (updaterAsset?['browser_download_url'] as String?) ?? '';
-  if (updaterUrl.isEmpty && legacyUpdaterName.isNotEmpty) {
-    updaterName = legacyUpdaterName; // extract this name from the package later
+  if (asset == null) {
+    final names = assets.map((a) => a['name']).whereType<String>().take(12).join(', ');
+    throw UpdateException('No package for this device ($assetName). Assets: $names');
   }
 
   final builtAt = DateTime.parse(asset['updated_at'] as String).toUtc();
@@ -150,11 +146,12 @@ Future<UpdateBuild?> fetchUpdateBuild() async {
     sha: sha,
     isNewer: newerByVersion || newerByTime,
     updaterName: updaterName,
-    updaterUrl: updaterUrl,
+    updaterUrl: '',
   );
 }
 
-Future<File> _stampFile() async => File('${(await getApplicationSupportDirectory()).path}${Platform.pathSeparator}updatebuild.json');
+Future<File> _stampFile() async =>
+    File('${(await getApplicationSupportDirectory()).path}${Platform.pathSeparator}updatebuild.json');
 
 Future<DateTime?> _readStamp() async {
   try {
@@ -178,7 +175,8 @@ Future<void> _fetchTo(
   final client = http.Client();
   IOSink? sink;
   try {
-    final response = await client.send(http.Request('GET', Uri.parse(url))..headers.addAll(_headers)).timeout(const Duration(seconds: 20));
+    final response =
+        await client.send(http.Request('GET', Uri.parse(url))..headers.addAll(_headers)).timeout(const Duration(seconds: 20));
     if (response.statusCode != 200) throw UpdateException('Download failed (${response.statusCode})');
 
     final total = response.contentLength ?? expectedSize;
@@ -219,7 +217,6 @@ Future<Directory> _downloadDir() async {
   return Directory('${Directory.systemTemp.path}${Platform.pathSeparator}khmer_update_dl');
 }
 
-/// Legacy path: pull the updater out of the package when no separate asset exists.
 Future<void> _extractUpdaterFromPackage(String archivePath, String updaterName) async {
   if (updaterName.isEmpty) return;
   final dir = File(archivePath).parent.path;
@@ -231,12 +228,12 @@ Future<void> _extractUpdaterFromPackage(String archivePath, String updaterName) 
     final tar = '${Platform.environment['SystemRoot'] ?? r'C:\Windows'}\System32\tar.exe';
     final r = await Process.run(tar, ['-xf', archivePath, '-C', dir, updaterName]);
     if (r.exitCode != 0 || !out.existsSync()) {
-      throw const UpdateException('Package is missing the updater');
+      throw UpdateException('Package is missing the updater ($updaterName)');
     }
   } else if (Platform.isLinux) {
     final r = await Process.run('tar', ['-xzf', archivePath, '-C', dir, './$updaterName', updaterName]);
     if (r.exitCode != 0 || !out.existsSync()) {
-      throw const UpdateException('Package is missing the updater');
+      throw UpdateException('Package is missing the updater ($updaterName)');
     }
     await Process.run('chmod', ['+x', out.path]);
   } else if (Platform.isMacOS) {
@@ -245,7 +242,7 @@ Future<void> _extractUpdaterFromPackage(String archivePath, String updaterName) 
       final attach = await Process.run('hdiutil', ['attach', '-nobrowse', '-readonly', '-mountpoint', mnt.path, archivePath]);
       if (attach.exitCode != 0) throw const UpdateException('Could not open the disk image');
       final src = File('${mnt.path}$sep$updaterName');
-      if (!src.existsSync()) throw const UpdateException('Package is missing the updater');
+      if (!src.existsSync()) throw UpdateException('Package is missing the updater ($updaterName)');
       src.copySync(out.path);
       await Process.run('chmod', ['+x', out.path]);
     } finally {
@@ -257,7 +254,6 @@ Future<void> _extractUpdaterFromPackage(String archivePath, String updaterName) 
   }
 }
 
-/// Downloads the package and, on desktop, the updater executable as its own file.
 Future<String> downloadUpdateBuild(
   UpdateBuild build,
   void Function(int received, int total) onProgress, {
@@ -268,20 +264,10 @@ Future<String> downloadUpdateBuild(
   dir.createSync(recursive: true);
   final sep = Platform.pathSeparator;
 
-  // Updater first (small), then the package with progress.
-  if (build.updaterName.isNotEmpty && build.updaterUrl.isNotEmpty) {
-    final updaterFile = File('${dir.path}$sep${build.updaterName}');
-    await _fetchTo(build.updaterUrl, updaterFile, 0, null, isCancelled);
-    if (!Platform.isWindows) {
-      await Process.run('chmod', ['+x', updaterFile.path]);
-    }
-  }
-
   final target = File('${dir.path}$sep${build.assetName}');
   await _fetchTo(build.url, target, build.size, onProgress, isCancelled);
 
-  // Older releases: no separate updater asset → take it from the package.
-  if (build.updaterName.isNotEmpty && build.updaterUrl.isEmpty) {
+  if (build.updaterName.isNotEmpty) {
     await _extractUpdaterFromPackage(target.path, build.updaterName);
   }
   return target.path;
@@ -298,8 +284,6 @@ bool _writable(Directory d) {
   }
 }
 
-/// Android: opens the system installer for the downloaded APK.
-/// Desktop: starts the downloaded updater. The updater closes this app, replaces files, restarts.
 Future<UpdateInstallResult> installUpdateBuild(String path, UpdateBuild build) async {
   if (Platform.isAndroid) {
     try {
@@ -345,7 +329,6 @@ Future<UpdateInstallResult> installUpdateBuild(String path, UpdateBuild build) a
     ];
 
     if (Platform.isWindows) {
-      // `start /B` fully detaches so the updater keeps running after this process exits.
       final args = ['/c', 'start', '', '/B', updater, '--exe', exeName, ...common];
       await Process.start(
         'cmd',
@@ -376,8 +359,6 @@ Future<UpdateInstallResult> installUpdateBuild(String path, UpdateBuild build) a
 
 Future<void> finishUpdateInstall() async {
   if (!updateRestartsApp) return;
-  // Give the updater a moment to start, then exit. The updater will also force-close
-  // this process if it is still alive, then replace files and restart the app.
   await Future<void>.delayed(const Duration(milliseconds: 1200));
   exit(0);
 }

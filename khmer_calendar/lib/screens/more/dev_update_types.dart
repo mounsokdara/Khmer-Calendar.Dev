@@ -23,43 +23,26 @@ class UpdateBuild {
     this.updaterUrl = '',
   });
 
-  /// From the release tag / version.txt, e.g. `1.0.5`.
   final String versionName;
-
-  /// Android: `arm64`, `arm32`, `x64`, `arm32_64` or `universal`. Desktop: `x64`, `arm64` (macOS also `x86_64`).
   final String package;
   final String assetName;
   final String url;
-
-  /// Bytes (0 when GitHub did not say).
   final int size;
-
-  /// When the asset finished uploading.
   final DateTime builtAt;
-
-  /// Short commit id taken from the release title, `''` when it cannot be read.
   final String sha;
-
-  /// True when this build is newer than what is installed.
   final bool isNewer;
 
-  /// Desktop only: small updater program (separate release asset preferred).
-  /// e.g. `update-windows-x64.exe`, `update-linux-x64`, `update-macos.sh`.
+  /// Desktop only: updater file name inside the package archive.
+  /// Windows: `update-windows.exe`, Linux: `update-linux-x64`, macOS: `update-macos.sh`.
   final String updaterName;
 
-  /// Direct download URL for [updaterName]. Empty on older releases that only
-  /// shipped the updater inside the package (then the app extracts it).
+  /// Unused: updater is always taken from the package (kept for API stability).
   final String updaterUrl;
 }
 
 enum UpdateInstallResult {
-  /// The system installer is on screen (or the desktop updater was started).
   started,
-
-  /// "Install unknown apps" has to be allowed for this app first (its settings page was opened).
   needsPermission,
-
-  /// Desktop: the folder the app lives in cannot be written (for example Program Files).
   notWritable,
   failed,
 }
@@ -71,7 +54,6 @@ class UpdateException implements Exception {
   String toString() => message;
 }
 
-/// Raised when the person taps Cancel while a download runs.
 class UpdateCancelled implements Exception {
   const UpdateCancelled();
 }
