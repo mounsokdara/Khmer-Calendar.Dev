@@ -559,3 +559,48 @@ Future<void> finishUpdateInstall() async {
   await Future<void>.delayed(const Duration(milliseconds: 1200));
   exit(0);
 }
+
+/// Reads (and removes) the failure report left by the updater. Null when the last update was fine
+/// or the report is older than a day.
+Future<UpdateFailure?> takeUpdateFailure() async {
+  if (!updateRestartsApp) return null;
+  try {
+    final dir = (await getApplicationSupportDirectory()).path;
+    final f = File(_joinPath([dir, 'update_result.json']));
+    if (!f.existsSync()) return null;
+    final json = jsonDecode(await f.readAsString()) as Map<String, dynamic>;
+    f.deleteSync();
+    final at = DateTime.tryParse('${json['at']}');
+    if (at != null && DateTime.now().toUtc().difference(at.toUtc()).inHours > 24) return null;
+    if (json['status'] != 'failed') return null;
+    List<String> list(Object? v) => (v as List? ?? const []).map((e) => '$e').toList();
+    return UpdateFailure(
+      reason: '${json['reason'] ?? 'error'}',
+      files: list(json['files']),
+      processes: list(json['processes']),
+      detail: '${json['detail'] ?? ''}',
+    );
+  } catch (_) {
+    return null;
+  }
+}
+
+/// Other running copies of this app (same executable name, different process id). They keep the
+/// app files locked and block an update, so we warn before the app closes. Best effort.
+Future<List<String>> otherAppInstances() async {
+  try {
+    final exe = Platform.resolvedExecutable;
+    final name = exe.substring(exe.lastIndexOf(Platform.pathSeparator) + 1);
+    if (Platform.isWindows) {
+      final r = await Process.run('tasklist', ['/FI', 'IMAGENAME eq $name', '/NH', '/FO', 'CSV']);
+      final ids = RegExp(r'"[^"]+","(\d+)"').allMatches('${r.stdout}').map((m) => int.parse(m.group(1)!));
+      return ids.where((id) => id != pid).map((id) => '$name ($id)').toList();
+    }
+    if (Platform.isLinux || Platform.isMacOS) {
+      final r = await Process.run('pgrep', ['-x', name]);
+      final ids = '${r.stdout}'.split('\n').map(int.tryParse).whereType<int>();
+      return ids.where((id) => id != pid).map((id) => '$name ($id)').toList();
+    }
+  } catch (_) {}
+  return const [];
+}

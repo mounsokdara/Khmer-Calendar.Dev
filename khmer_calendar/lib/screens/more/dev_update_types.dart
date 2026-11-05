@@ -57,3 +57,16 @@ class UpdateException implements Exception {
 class UpdateCancelled implements Exception {
   const UpdateCancelled();
 }
+
+/// Written by the desktop updater when it could not finish; shown once on the next start.
+class UpdateFailure {
+  const UpdateFailure({required this.reason, this.files = const [], this.processes = const [], this.detail = ''});
+
+  /// `locked` = another program was using the app files, `error` = anything else.
+  final String reason;
+  final List<String> files;
+  final List<String> processes;
+  final String detail;
+
+  bool get isLocked => reason == 'locked';
+}

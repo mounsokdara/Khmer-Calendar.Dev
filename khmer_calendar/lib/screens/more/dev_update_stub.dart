@@ -15,3 +15,7 @@ Future<UpdateInstallResult> installUpdateBuild(String path, UpdateBuild build) a
 const bool updateRestartsApp = false;
 
 Future<void> finishUpdateInstall() async {}
+
+Future<UpdateFailure?> takeUpdateFailure() async => null;
+
+Future<List<String>> otherAppInstances() async => const [];

@@ -7,6 +7,8 @@ import '../i18n.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets/overlay_page.dart';
+import 'more/dev_update.dart' show inAppUpdateSupported;
+import 'more/dev_update_ui.dart' show showPendingUpdateFailure;
 
 class AppShell extends StatelessWidget {
   const AppShell({super.key, required this.store, required this.child});
@@ -46,6 +48,20 @@ class _ShellBodyState extends State<_ShellBody> {
   // used to wipe the visible snackbar (and reset the page) every time the window
   // crossed the breakpoint.
   final _hostKey = GlobalKey();
+
+  // Checked once per launch: did the desktop updater fail last time (e.g. files in use)?
+  static bool _updateReportChecked = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (inAppUpdateSupported && !_updateReportChecked) {
+      _updateReportChecked = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) showPendingUpdateFailure(context, widget.store.lang);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
