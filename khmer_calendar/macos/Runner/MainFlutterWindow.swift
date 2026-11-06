@@ -5,14 +5,15 @@ class MainFlutterWindow: NSWindow {
   private var autostartChannel: FlutterMethodChannel?
 
   override func awakeFromNib() {
-    let flutterViewController = FlutterViewController()
-
-    // Forward process args (e.g. --autostart) so Dart main(List<String> args) sees them.
     let processArgs = ProcessInfo.processInfo.arguments
-    if processArgs.count > 1 {
-      let dartArgs = Array(processArgs.dropFirst()) // drop executable path
-      flutterViewController.engine.project.dartEntrypointArguments = dartArgs
-    }
+    let dartArgs = processArgs.count > 1 ? Array(processArgs.dropFirst()) : [String]()
+    let background =
+      dartArgs.contains("--autostart") || dartArgs.contains("--background")
+
+    // Build project with args before the engine starts so main(List<String>) receives them.
+    let project = FlutterDartProject()
+    project.dartEntrypointArguments = dartArgs
+    let flutterViewController = FlutterViewController(project: project, nibName: nil, bundle: nil)
 
     let windowFrame = self.frame
     self.contentViewController = flutterViewController
@@ -37,7 +38,6 @@ class MainFlutterWindow: NSWindow {
       }
     }
 
-    let background = processArgs.contains("--autostart") || processArgs.contains("--background")
     if background {
       // Do not show the main window when launched as background service.
       self.orderOut(nil)
