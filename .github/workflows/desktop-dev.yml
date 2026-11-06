@@ -98,18 +98,18 @@ jobs:
         working-directory: khmer_calendar
       - run: flutter build macos --release
         working-directory: khmer_calendar
-      - name: Build background helper into the .app
+      - name: Install arch-independent background helper into the .app
         run: |
           APP=$(find khmer_calendar/build/macos -name "*.app" | head -1)
           MACOS_DIR="$APP/Contents/MacOS"
-          dart compile exe tools/background/bg_service.dart -o "$MACOS_DIR/khmer-calendar-bg"
+          # Shell script works on arm64 and x86_64 (dart compile exe is host-arch only).
+          cp tools/background/khmer-calendar-bg-macos.sh "$MACOS_DIR/khmer-calendar-bg"
           chmod +x "$MACOS_DIR/khmer-calendar-bg"
-          codesign --force --sign - "$MACOS_DIR/khmer-calendar-bg" || true
       - name: Keep the universal app
         run: |
           APP=$(find khmer_calendar/build/macos -name "*.app" | head -1)
           tar -C "$(dirname "$APP")" -cf macos-app.tar "$(basename "$APP")"
-          lipo -archs "$APP/Contents/MacOS/"* || true
+          lipo -archs "$APP/Contents/MacOS/"* 2>/dev/null || true
       - uses: actions/upload-artifact@v4
         with:
           name: desktop-macos-app
