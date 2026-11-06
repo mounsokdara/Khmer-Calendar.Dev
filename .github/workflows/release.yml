@@ -93,20 +93,15 @@ jobs:
             -name 'KhmerCalendar-*' -o \
             -name 'KhmerCalendar-Updater-*' \
           \) ! -name '*.idsig' -exec cp -t release-files {} +
-          # Portable universal Windows: one top-level KhmerCalendar.exe (no .cmd),
-          # plus x64/ and arm64/ app trees.
-          if [ -f dist/windows-x64/KhmerCalendar-windows-x64.zip ] && [ -f dist/windows-arm64/KhmerCalendar-windows-arm64.zip ]; then
-            mkdir -p u-win/x64 u-win/arm64
-            unzip -q dist/windows-x64/KhmerCalendar-windows-x64.zip -d u-win/x64
-            unzip -q dist/windows-arm64/KhmerCalendar-windows-arm64.zip -d u-win/arm64
-            if [ -f dist/windows-portable-launcher/KhmerCalendar.exe ]; then
-              cp dist/windows-portable-launcher/KhmerCalendar.exe u-win/KhmerCalendar.exe
-            else
-              echo "::warning::windows portable launcher missing; universal zip will have no top-level exe"
-            fi
+          # Portable universal Windows: one flat folder (x64 build).
+          # No x64/arm64 subfolders and no launcher — double-click khmer_calendar.exe.
+          # Works on ARM64 Windows via built-in x64 emulation.
+          if [ -f dist/windows-x64/KhmerCalendar-windows-x64.zip ]; then
+            mkdir -p u-win
+            unzip -q dist/windows-x64/KhmerCalendar-windows-x64.zip -d u-win
             (cd u-win && zip -qr ../release-files/KhmerCalendar-windows-universal.zip .)
           else
-            echo "::warning::windows universal skipped (needs both the x64 and arm64 zips)"
+            echo "::warning::windows universal skipped (needs windows-x64 zip)"
           fi
           if [ -f dist/linux-x64/KhmerCalendar-linux-x64.tar.gz ] && [ -f dist/linux-arm64/KhmerCalendar-linux-arm64.tar.gz ]; then
             mkdir -p u-linux/x64 u-linux/arm64

@@ -1,6 +1,5 @@
 # Windows: build, sign, bundle VC++ runtime, pack zip (includes update-windows.exe
-# and khmer-calendar-bg.exe). Also uploads a standalone updater exe and the
-# portable universal launcher (KhmerCalendar.exe).
+# and khmer-calendar-bg.exe). Also uploads a standalone updater exe.
 name: Windows
 
 on:
@@ -75,12 +74,6 @@ jobs:
       - name: Standalone updater copy (separate release asset)
         shell: pwsh
         run: Copy-Item khmer_calendar\build\windows\${{ matrix.arch }}\runner\Release\update-windows.exe KhmerCalendar-Updater-windows-${{ matrix.arch }}.exe
-      - name: Build portable universal launcher (x64 host, runs on ARM64 too via WoW if needed)
-        if: matrix.arch == 'x64'
-        shell: pwsh
-        run: |
-          dart compile exe tools/launcher/windows_portable.dart -o KhmerCalendar.exe
-          ./tools/background/set-gui-subsystem.ps1 -Exe KhmerCalendar.exe
       - name: Pack windows
         shell: pwsh
         run: Compress-Archive -Path khmer_calendar\build\windows\${{ matrix.arch }}\runner\Release\* -DestinationPath KhmerCalendar-windows-${{ matrix.arch }}.zip
@@ -97,11 +90,6 @@ jobs:
           name: updater-windows-${{ matrix.arch }}
           if-no-files-found: ignore
           path: KhmerCalendar-Updater-windows-${{ matrix.arch }}.exe
-      - uses: actions/upload-artifact@v4
-        if: matrix.arch == 'x64'
-        with:
-          name: windows-portable-launcher
-          path: KhmerCalendar.exe
 
   installers:
     name: windows-installers
