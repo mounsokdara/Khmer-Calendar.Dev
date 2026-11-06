@@ -10,11 +10,8 @@ String updateReleasePageUrl(String versionName) =>
 
 /// How the published build compares with the app that is running.
 enum UpdateKind {
-  /// version name or build number is higher than the installed one
+  /// version name or build number (version.txt) is higher than the installed app
   newerVersion,
-
-  /// same version, but a newer build of it was published after this one was installed
-  newerBuild,
 
   /// nothing newer
   upToDate,
@@ -56,7 +53,7 @@ class UpdateBuild {
   final int? remoteBuildNumber;
 
   /// True only when there really is something newer to install.
-  bool get isNewer => kind == UpdateKind.newerVersion || kind == UpdateKind.newerBuild;
+  bool get isNewer => kind == UpdateKind.newerVersion;
 
   /// Desktop only: updater file name inside the package archive.
   /// Windows: `update-windows.exe`, Linux: `update-linux-x64`, macOS: `update-macos.sh`.

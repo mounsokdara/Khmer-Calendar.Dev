@@ -47,14 +47,11 @@ int? _parseVersionCode(String text) {
   return m == null ? null : int.tryParse(m.group(1)!);
 }
 
-/// The app version is checked FIRST: only a higher version name or build number counts as an update.
-/// Only when both are equal, a build that was published after this one was installed counts as a
-/// newer build of the same version. [builtAt] is null when the publish time is not known.
+/// Decided only by the app version: version.txt (versionName, then versionCode) against the
+/// installed app (appVersion / appBuildNumber). Publish dates are never used.
 UpdateKind _decideKind({
   required String remoteVersion,
   required int? remoteBuild,
-  required DateTime? builtAt,
-  required DateTime? installedAt,
 }) {
   final c = _compareVersions(remoteVersion, appVersion);
   if (c > 0) return UpdateKind.newerVersion;
@@ -63,10 +60,7 @@ UpdateKind _decideKind({
     if (remoteBuild > theme.appBuildNumber) return UpdateKind.newerVersion;
     if (remoteBuild < theme.appBuildNumber) return UpdateKind.aheadOfRelease;
   }
-  if (builtAt != null && installedAt != null && builtAt.isAfter(installedAt.add(const Duration(seconds: 30)))) {
-    return UpdateKind.newerBuild;
-  }
-  return UpdateKind.upToDate; // no stamp / no proof of a newer build: do not claim an update
+  return UpdateKind.upToDate;
 }
 
 String? _parseVersionName(String text) {
@@ -222,13 +216,11 @@ Future<UpdateBuild?> fetchUpdateBuild() async {
   late String assetName;
   String? fallbackPackage;
   var updaterName = '';
-  DateTime? installedAt;
 
   if (Platform.isAndroid) {
     final info = await _channel.invokeMapMethod<String, dynamic>('installInfo');
     if (info == null) throw const UpdateException('Cannot read the installed version');
     final versionCode = (info['versionCode'] as num).toInt();
-    installedAt = DateTime.fromMillisecondsSinceEpoch((info['installedAt'] as num).toInt(), isUtc: true);
     package = _packageByDigit[versionCode % 10] ?? 'universal';
     assetName = 'KhmerCalendar-$package.apk';
   } else {
@@ -256,7 +248,6 @@ Future<UpdateBuild?> fetchUpdateBuild() async {
       assetName = 'KhmerCalendar-macos-$package.dmg';
       updaterName = 'update-macos.sh';
     }
-    installedAt = await _readStamp();
   }
 
   late final http.Response verRes;
@@ -298,7 +289,7 @@ Future<UpdateBuild?> fetchUpdateBuild() async {
       size: 0,
       builtAt: DateTime.now().toUtc(),
       sha: '',
-      kind: _decideKind(remoteVersion: versionName, remoteBuild: remoteBuild, builtAt: null, installedAt: installedAt),
+      kind: _decideKind(remoteVersion: versionName, remoteBuild: remoteBuild),
       installedVersion: appVersion,
       remoteBuildNumber: remoteBuild,
       updaterName: updaterName,
@@ -338,7 +329,7 @@ Future<UpdateBuild?> fetchUpdateBuild() async {
     size: (asset['size'] as num?)?.toInt() ?? 0,
     builtAt: builtAt,
     sha: sha,
-    kind: _decideKind(remoteVersion: versionName, remoteBuild: remoteBuild, builtAt: builtAt, installedAt: installedAt),
+    kind: _decideKind(remoteVersion: versionName, remoteBuild: remoteBuild),
     installedVersion: appVersion,
     remoteBuildNumber: remoteBuild,
     updaterName: updaterName,
@@ -348,17 +339,6 @@ Future<UpdateBuild?> fetchUpdateBuild() async {
 
 Future<File> _stampFile() async =>
     File(_joinPath([(await getApplicationSupportDirectory()).path, 'updatebuild.json']));
-
-Future<DateTime?> _readStamp() async {
-  try {
-    final f = await _stampFile();
-    if (!f.existsSync()) return null;
-    final json = jsonDecode(await f.readAsString()) as Map<String, dynamic>;
-    return DateTime.tryParse('${json['builtAt']}')?.toUtc();
-  } catch (_) {
-    return null;
-  }
-}
 
 Future<void> _fetchTo(
   String url,

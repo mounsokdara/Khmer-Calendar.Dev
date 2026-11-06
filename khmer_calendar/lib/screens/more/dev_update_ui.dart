@@ -105,9 +105,6 @@ Future<void> runInAppUpdateCheck(BuildContext context, Lang lang) async {
     case UpdateKind.newerVersion:
       heading = _s(lang, 'មានកំណែថ្មី', 'Update available');
       body = '${found.installedVersion.isEmpty ? '' : 'v${found.installedVersion}  →  '}v${found.versionName}\n\n${_describe(found)}';
-    case UpdateKind.newerBuild:
-      heading = _s(lang, 'មានកំណែកែលម្អថ្មី', 'New build available');
-      body = '${_s(lang, 'កំណែដដែល (v${found.versionName}) ប៉ុន្តែមានកំណែកែលម្អថ្មីជាងដែលអ្នកបានដំឡើង។', 'Same version (v${found.versionName}), but a newer build was published after yours.')}\n\n${_describe(found)}';
     case UpdateKind.aheadOfRelease:
       heading = title;
       body = '${_s(lang, 'កំណែរបស់អ្នក (v${found.installedVersion}) ថ្មីជាងកំណែដែលបានបោះផ្សាយ (v${found.versionName})។', 'Your version (v${found.installedVersion}) is newer than the published one (v${found.versionName}).')}\n\n${_describe(found)}';

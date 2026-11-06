@@ -5,9 +5,10 @@ import '../../theme.dart' show appVersion;
 // Prefixed: package:flutter/services.dart also exports a symbol named appBuildNumber.
 import '../../theme.dart' as theme show appBuildNumber;
 import '../../web_refresh.dart';
+import 'dev_update_types.dart' show updateRepo, updateVersionFileUrl;
 
 const currentAppVersion = appVersion;
-const latestReleaseUrl = 'https://github.com/mounsokdara/Khmer-Calendar/releases/latest';
+const latestReleaseUrl = 'https://github.com/$updateRepo/releases/latest';
 
 class UpdateInfo {
   const UpdateInfo({required this.version, required this.url});
@@ -17,7 +18,7 @@ class UpdateInfo {
 
 /// version.txt in the repo is the single source of truth for the latest version:
 /// two plain lines, `versionName=1.0.4` and `versionCode=5` (no JSON, no GitHub API rate limit).
-const versionFileUrl = 'https://raw.githubusercontent.com/mounsokdara/Khmer-Calendar/main/version.txt';
+const versionFileUrl = updateVersionFileUrl;
 
 /// Reads `versionName` out of the text of a version.txt, or null if it is missing.
 String? parseVersionName(String text) {
