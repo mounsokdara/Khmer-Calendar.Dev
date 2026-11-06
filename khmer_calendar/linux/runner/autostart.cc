@@ -9,6 +9,7 @@
 namespace {
 
 constexpr const char kDesktopId[] = "com.mounsokdara.khmercalendar.desktop";
+constexpr const char kBgName[] = "khmer-calendar-bg";
 
 std::string ExePath() {
   char buf[4096];
@@ -18,6 +19,28 @@ std::string ExePath() {
   }
   buf[n] = '\0';
   return std::string(buf);
+}
+
+std::string DirOf(const std::string& path) {
+  size_t slash = path.find_last_of('/');
+  if (slash == std::string::npos) {
+    return std::string();
+  }
+  return path.substr(0, slash);
+}
+
+// Prefer dedicated background binary next to the app.
+std::string BackgroundExec() {
+  std::string exe = ExePath();
+  if (exe.empty()) {
+    return std::string();
+  }
+  std::string dir = DirOf(exe);
+  std::string bg = dir + "/" + kBgName;
+  if (g_file_test(bg.c_str(), G_FILE_TEST_IS_EXECUTABLE)) {
+    return bg;
+  }
+  return exe + " --autostart";
 }
 
 std::string DesktopPath() {
@@ -32,35 +55,52 @@ std::string DesktopPath() {
 }
 
 bool WriteDesktop() {
-  std::string exe = ExePath();
+  std::string exec_line = BackgroundExec();
   std::string dest = DesktopPath();
-  if (exe.empty() || dest.empty()) {
+  if (exec_line.empty() || dest.empty()) {
     return false;
   }
   gchar* folder = g_path_get_dirname(dest.c_str());
   g_mkdir_with_parents(folder, 0755);
   g_free(folder);
 
+  // TryExec should be the binary only (no args).
+  std::string try_exec = exec_line;
+  size_t space = try_exec.find(' ');
+  if (space != std::string::npos) {
+    try_exec.resize(space);
+  }
+
   g_autoptr(GKeyFile) kf = g_key_file_new();
   g_key_file_set_string(kf, "Desktop Entry", "Type", "Application");
   g_key_file_set_string(kf, "Desktop Entry", "Version", "1.0");
-  g_key_file_set_string(kf, "Desktop Entry", "Name", "Khmer Calendar");
+  g_key_file_set_string(kf, "Desktop Entry", "Name",
+                        "Khmer Calendar Background");
   g_key_file_set_locale_string(kf, "Desktop Entry", "Name", "km",
-                               "ប្រតិទិនខ្មែរ");
+                               "ប្រតិទិនខ្មែរ (ផ្ទៃខាងក្រោយ)");
   g_key_file_set_string(kf, "Desktop Entry", "Comment",
-                        "Khmer lunar calendar");
-  gchar* exec = g_strdup_printf("\"%s\" --autostart", exe.c_str());
+                        "Background reminders for Khmer Calendar");
+  gchar* exec = g_strdup_printf("%s", exec_line.c_str());
+  // Quote path if it is a single path without args.
+  if (exec_line.find(' ') == std::string::npos) {
+    g_free(exec);
+    exec = g_strdup_printf("\"%s\"", exec_line.c_str());
+  } else {
+    // main --autostart fallback
+    size_t sp = exec_line.find(' ');
+    std::string bin = exec_line.substr(0, sp);
+    g_free(exec);
+    exec = g_strdup_printf("\"%s\" --autostart", bin.c_str());
+  }
   g_key_file_set_string(kf, "Desktop Entry", "Exec", exec);
   g_free(exec);
-  g_key_file_set_string(kf, "Desktop Entry", "TryExec", exe.c_str());
+  g_key_file_set_string(kf, "Desktop Entry", "TryExec", try_exec.c_str());
   g_key_file_set_string(kf, "Desktop Entry", "Categories",
-                        "Utility;Calendar;Education;");
-  g_key_file_set_string(kf, "Desktop Entry", "StartupWMClass",
-                        "com.mounsokdara.khmercalendar");
+                        "Utility;Calendar;");
   g_key_file_set_boolean(kf, "Desktop Entry", "Terminal", FALSE);
   g_key_file_set_boolean(kf, "Desktop Entry", "StartupNotify", FALSE);
   g_key_file_set_boolean(kf, "Desktop Entry", "Hidden", FALSE);
-  g_key_file_set_boolean(kf, "Desktop Entry", "DBusActivatable", FALSE);
+  g_key_file_set_boolean(kf, "Desktop Entry", "NoDisplay", TRUE);
   g_key_file_set_boolean(kf, "Desktop Entry", "X-GNOME-Autostart-enabled",
                          TRUE);
   g_key_file_set_integer(kf, "Desktop Entry", "X-GNOME-Autostart-Delay", 2);

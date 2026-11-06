@@ -17,6 +17,7 @@ constexpr wchar_t kApprovedFolderKey[] =
     L"Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\StartupFolder";
 constexpr wchar_t kValueName[] = L"KhmerCalendar";
 constexpr wchar_t kShortcutName[] = L"Khmer Calendar.lnk";
+constexpr wchar_t kBgExeName[] = L"khmer-calendar-bg.exe";
 
 std::wstring ExePath() {
   wchar_t buf[MAX_PATH] = {};
@@ -27,8 +28,25 @@ std::wstring ExePath() {
   return std::wstring(buf);
 }
 
-// Single launch command: one Run-key entry with --autostart (background only).
-std::wstring CommandLineFor(const std::wstring& exe) {
+std::wstring DirOf(const std::wstring& path) {
+  size_t slash = path.find_last_of(L"\\/");
+  if (slash == std::wstring::npos) {
+    return std::wstring();
+  }
+  return path.substr(0, slash);
+}
+
+// Prefer dedicated background executable; fall back to main.exe --autostart.
+std::wstring BackgroundCommand() {
+  std::wstring exe = ExePath();
+  if (exe.empty()) {
+    return std::wstring();
+  }
+  std::wstring dir = DirOf(exe);
+  std::wstring bg = dir + L"\\" + kBgExeName;
+  if (GetFileAttributesW(bg.c_str()) != INVALID_FILE_ATTRIBUTES) {
+    return L"\"" + bg + L"\"";
+  }
   return L"\"" + exe + L"\" --autostart";
 }
 
@@ -101,7 +119,6 @@ bool ApprovedEnabled(HKEY root, const wchar_t* subkey, const wchar_t* name) {
   if (st != ERROR_SUCCESS || bytes == 0) {
     return true;
   }
-  // Bit 0 set means disabled in Settings / Task Manager.
   return (data[0] & 0x01) == 0;
 }
 
@@ -142,7 +159,6 @@ std::wstring ShortcutPath() {
   return dir;
 }
 
-// Remove legacy Startup-folder shortcut so only the Run key remains.
 bool RemoveShortcut() {
   std::wstring dest = ShortcutPath();
   if (dest.empty()) {
@@ -165,16 +181,12 @@ bool ShortcutExists() {
 }  // namespace
 
 bool KhmerAutostartEnable() {
-  std::wstring exe = ExePath();
-  if (exe.empty()) {
+  std::wstring cmd = BackgroundCommand();
+  if (cmd.empty()) {
     return false;
   }
-  // Only the Run key — never both Run key and Startup folder (that caused
-  // the app to launch twice at sign-in).
-  std::wstring cmd = CommandLineFor(exe);
   bool run = WriteSz(HKEY_CURRENT_USER, kRunKey, kValueName, cmd);
   WriteApprovedEnabled(HKEY_CURRENT_USER, kApprovedKey, kValueName);
-  // Clean up any leftover dual-registration from older builds.
   RemoveShortcut();
   DeleteValue(HKEY_CURRENT_USER, kApprovedFolderKey, kShortcutName);
   return run;
@@ -195,7 +207,6 @@ bool KhmerAutostartIsEnabled() {
       ApprovedEnabled(HKEY_CURRENT_USER, kApprovedKey, kValueName)) {
     return true;
   }
-  // Treat leftover shortcut as enabled only until the next enable/disable.
   if (ShortcutExists() &&
       ApprovedEnabled(HKEY_CURRENT_USER, kApprovedFolderKey, kShortcutName)) {
     return true;
