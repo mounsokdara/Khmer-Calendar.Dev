@@ -84,23 +84,14 @@ Future<void> _syncNativeFlags(AppStore store) async {
   });
 }
 
-/// Desktop: register login bg helper and start it when background mode is on.
+/// Desktop: start the headless background helper now. This must NOT touch the
+/// login-startup registration; that belongs to the separate auto launch toggle.
 Future<void> _desktopBackgroundOn() async {
   if (!_desktop) return;
   try {
-    await autostart.enableDesktopAutostart();
     await autostart.ensureDesktopBackgroundRunning();
   } catch (e) {
     debugPrint('desktop background on: $e');
-  }
-}
-
-Future<void> _desktopBackgroundOff() async {
-  if (!_desktop) return;
-  try {
-    await autostart.disableDesktopAutostart();
-  } catch (e) {
-    debugPrint('desktop background off: $e');
   }
 }
 
@@ -400,11 +391,8 @@ Future<bool> requestBackground(AppStore store, {BuildContext? context}) async {
   await _syncNativeFlags(store);
   if (ok) {
     await initReminderEngine();
-    // Desktop: turn on login bg helper and start it now.
-    if (_desktop) {
-      store.setAutoLaunchOn(true);
-      await _desktopBackgroundOn();
-    }
+    // Desktop: start the bg helper now. Auto launch stays independent.
+    await _desktopBackgroundOn();
   }
   return ok;
 }
@@ -412,10 +400,6 @@ Future<bool> requestBackground(AppStore store, {BuildContext? context}) async {
 Future<void> stopBackground(AppStore store) async {
   store.setBackgroundOn(false);
   await _syncNativeFlags(store);
-  if (_desktop) {
-    store.setAutoLaunchOn(false);
-    await _desktopBackgroundOff();
-  }
 }
 
 Future<bool> requestAutoLaunch(AppStore store, {BuildContext? context}) async {
@@ -572,12 +556,14 @@ Future<void> applyStoredPermissions(AppStore store) async {
     Future<void>.delayed(
         const Duration(milliseconds: 120), () => syncReminders(store));
   }
-  // On every launch: if background (or auto-launch) is on, keep the login
-  // bg helper registered and make sure a headless instance can run.
-  if (_desktop && (store.backgroundOn || store.autoLaunchOn)) {
+  // On every launch: login startup is registered only when auto launch is on.
+  // A headless instance is kept running if either toggle is on.
+  if (_desktop) {
     try {
-      await autostart.enableDesktopAutostart();
-      await autostart.ensureDesktopBackgroundRunning();
+      if (store.autoLaunchOn) await autostart.enableDesktopAutostart();
+      if (store.backgroundOn || store.autoLaunchOn) {
+        await autostart.ensureDesktopBackgroundRunning();
+      }
     } catch (_) {}
   }
 }
