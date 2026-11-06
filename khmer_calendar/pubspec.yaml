@@ -36,7 +36,11 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/
+    - assets/zodiac/
+    - assets/icons/
+    - assets/os/
+    - assets/sounds/
+    - assets/config/wheel_picker_audio.json
   fonts:
     - family: KantumruyPro
       fonts:
