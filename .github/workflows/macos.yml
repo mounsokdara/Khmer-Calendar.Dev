@@ -1,5 +1,6 @@
 # macOS: build once, then pack signed .dmg files. Each volume has the .app
-# (with khmer-calendar-bg helper) and update-macos.sh.
+# (with khmer-calendar-bg helper) and update-macos.sh. Universal also uploads
+# a standalone updater zip.
 name: macOS
 
 on:
@@ -77,3 +78,15 @@ jobs:
         with:
           name: macos-${{ matrix.arch }}
           path: KhmerCalendar-macos-${{ matrix.arch }}.dmg
+      - name: Standalone updater (zip keeps the executable bit; one copy for all archs)
+        if: matrix.arch == 'universal'
+        run: |
+          mkdir updater-macos
+          cp tools/updater/update-macos.sh updater-macos/KhmerCalendar-Updater-macos.command
+          chmod +x updater-macos/KhmerCalendar-Updater-macos.command
+          (cd updater-macos && zip -q ../KhmerCalendar-Updater-macos.zip KhmerCalendar-Updater-macos.command)
+      - uses: actions/upload-artifact@v4
+        if: matrix.arch == 'universal'
+        with:
+          name: updater-macos
+          path: KhmerCalendar-Updater-macos.zip

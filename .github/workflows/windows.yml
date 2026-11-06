@@ -1,5 +1,5 @@
 # Windows: build, sign, bundle VC++ runtime, pack zip (includes update-windows.exe
-# and khmer-calendar-bg.exe inside the package).
+# and khmer-calendar-bg.exe). Also uploads a standalone updater exe.
 name: Windows
 
 on:
@@ -41,10 +41,18 @@ jobs:
           & "$env:RUNNER_TEMP\flutter\bin\flutter.bat" --version
       - run: flutter pub get
         working-directory: khmer_calendar
-      - run: flutter build windows --release
+      - name: Build windows
+        shell: pwsh
         working-directory: khmer_calendar
         env:
           CXXFLAGS: /D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS
+        run: |
+          flutter build windows --release 2>&1 | Tee-Object -Variable log | Out-Host
+          if ($LASTEXITCODE -ne 0) {
+            $tail = (($log | Select-Object -Last 25) -join ' | ') -replace '[\r\n]+', ' '
+            Write-Host "::error title=flutter build windows failed::$tail"
+            exit 1
+          }
       - name: Sign windows (Authenticode)
         shell: pwsh
         env:
@@ -64,6 +72,9 @@ jobs:
           dart compile exe tools/background/bg_service.dart -o $out
           # dart compile exe is always a console PE; flip to GUI so no cmd window opens.
           ./tools/background/set-gui-subsystem.ps1 -Exe $out
+      - name: Standalone updater copy (separate release asset)
+        shell: pwsh
+        run: Copy-Item khmer_calendar\build\windows\${{ matrix.arch }}\runner\Release\update-windows.exe KhmerCalendar-Updater-windows-${{ matrix.arch }}.exe
       - name: Pack windows
         shell: pwsh
         run: Compress-Archive -Path khmer_calendar\build\windows\${{ matrix.arch }}\runner\Release\* -DestinationPath KhmerCalendar-windows-${{ matrix.arch }}.zip
@@ -75,6 +86,11 @@ jobs:
           name: windows-${{ matrix.arch }}
           if-no-files-found: ignore
           path: KhmerCalendar-windows-${{ matrix.arch }}.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: updater-windows-${{ matrix.arch }}
+          if-no-files-found: ignore
+          path: KhmerCalendar-Updater-windows-${{ matrix.arch }}.exe
 
   installers:
     name: windows-installers

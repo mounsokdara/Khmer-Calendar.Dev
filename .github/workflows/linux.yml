@@ -1,0 +1,73 @@
+# Linux: build release bundle with updater + background helper, pack tar.gz,
+# and publish a standalone updater binary.
+name: Linux
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    name: linux-${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    continue-on-error: ${{ matrix.experimental }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x64, runner: ubuntu-latest, experimental: false }
+          - { arch: arm64, runner: ubuntu-24.04-arm, experimental: true }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply version.txt
+        run: bash scripts/set-version.sh --apply
+      - uses: subosito/flutter-action@v2
+        if: matrix.arch == 'x64'
+        with:
+          flutter-version: "3.47.4"
+          channel: stable
+          cache: true
+      - name: Flutter SDK 3.47.4 from git (arm64)
+        if: matrix.arch == 'arm64'
+        run: |
+          git clone --depth 1 --branch 3.47.4 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/flutter/bin/flutter" --version
+      - name: Linux toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+      - run: flutter pub get
+        working-directory: khmer_calendar
+      - name: Build linux
+        working-directory: khmer_calendar
+        run: |
+          set -o pipefail
+          flutter build linux --release 2>&1 | tee "$RUNNER_TEMP/build.log" || {
+            echo "::error title=flutter build linux failed::$(tail -n 25 "$RUNNER_TEMP/build.log" | tr '\n' '|')"
+            exit 1
+          }
+      - name: Build updater into the package folder
+        run: |
+          dart compile exe tools/updater/update.dart -o khmer_calendar/build/linux/${{ matrix.arch }}/release/bundle/update-linux-${{ matrix.arch }}
+          chmod +x khmer_calendar/build/linux/${{ matrix.arch }}/release/bundle/update-linux-${{ matrix.arch }}
+      - name: Build background service into the package folder
+        run: |
+          dart compile exe tools/background/bg_service.dart -o khmer_calendar/build/linux/${{ matrix.arch }}/release/bundle/khmer-calendar-bg
+          chmod +x khmer_calendar/build/linux/${{ matrix.arch }}/release/bundle/khmer-calendar-bg
+      - name: Standalone updater copy (separate release asset)
+        run: cp khmer_calendar/build/linux/${{ matrix.arch }}/release/bundle/update-linux-${{ matrix.arch }} KhmerCalendar-Updater-linux-${{ matrix.arch }}
+      - name: Pack linux
+        run: tar -C khmer_calendar/build/linux/${{ matrix.arch }}/release/bundle -czf KhmerCalendar-linux-${{ matrix.arch }}.tar.gz .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{ matrix.arch }}
+          path: KhmerCalendar-linux-${{ matrix.arch }}.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: updater-linux-${{ matrix.arch }}
+          path: KhmerCalendar-Updater-linux-${{ matrix.arch }}
