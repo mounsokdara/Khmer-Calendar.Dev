@@ -51,6 +51,13 @@ dialog() {
   case "$out" in Retry) echo retry ;; "Force close") echo force ;; "Force as administrator") echo admin ;; *) echo cancel ;; esac
 }
 
+# confirm "<message>"  ->  exit 0 for Reinstall, 1 for Cancel
+confirm() {
+  osascript -e 'on run argv' \
+    -e 'display dialog (item 1 of argv) with title (item 2 of argv) buttons {"Cancel", "Reinstall"} default button "Cancel" with icon note' \
+    -e 'end run' "$1" "$TITLE" >/dev/null 2>&1
+}
+
 notify() {
   osascript -e 'on run argv' \
     -e 'display dialog (item 1 of argv) with title (item 2 of argv) buttons {"OK"} default button "OK" with icon note' \
@@ -196,10 +203,14 @@ Open the updater again and select Khmer Calendar.app, or start it with --app-dir
       notify "Your version (v$inst_v) is newer than the published one (v$ver). No update is needed."; exit 0
     elif [ "$cmp" = "0" ]; then
       if [ -n "$inst_c" ] && [ -n "$code" ] && [ "$code" -gt "$inst_c" ] 2>/dev/null; then :
+      elif [ -n "$inst_c" ] && [ -n "$code" ] && [ "$code" -lt "$inst_c" ] 2>/dev/null; then
+        notify "Your build ($inst_c) is newer than the published one ($code). No update is needed."; exit 0
       else
-        notify "You already have the latest version (v$inst_v). No update is needed.
+        # same version and build: ask before reinstalling
+        say "same version (v$inst_v), asking to reinstall"
+        confirm "You already have the latest version (v$inst_v).
 
-(To reinstall anyway, start the updater with --force-update 1.)"; exit 0
+Do you want to reinstall it anyway?" || { say "reinstall declined"; exit 0; }
       fi
     fi
   fi

@@ -402,6 +402,37 @@ Future<_Choice> _ask(String title, String message, {required bool canForce, bool
   return _Choice.cancel;
 }
 
+/// Yes / No question in a native dialog. Returns false when there is no dialog tool.
+Future<bool> _confirm(String title, String message, {String yes = 'Reinstall', String no = 'Cancel'}) async {
+  try {
+    if (Platform.isWindows) {
+      final r = await _powershell(
+        r"Add-Type -AssemblyName System.Windows.Forms; $f = New-Object System.Windows.Forms.Form -Property @{TopMost = $true}; "
+        r"$a = [System.Windows.Forms.MessageBox]::Show($f, $env:KC_MSG, $env:KC_TITLE, 'YesNo', 'Question'); "
+        r"if ($a -eq 'Yes') { exit 0 } else { exit 1 }",
+        {'KC_MSG': message, 'KC_TITLE': title},
+      );
+      return r.exitCode == 0;
+    }
+    if (Platform.isLinux) {
+      final zenity = await Process.run('which', ['zenity']);
+      if (zenity.exitCode == 0) {
+        final r = await Process.run('zenity', [
+          '--question', '--title=$title', '--text=$message',
+          '--ok-label=$yes', '--cancel-label=$no', '--width=420',
+        ]);
+        return r.exitCode == 0;
+      }
+      final kdialog = await Process.run('which', ['kdialog']);
+      if (kdialog.exitCode == 0) {
+        final r = await Process.run('kdialog', ['--title', title, '--yes-label', yes, '--no-label', no, '--yesno', message]);
+        return r.exitCode == 0;
+      }
+    }
+  } catch (_) {}
+  return false;
+}
+
 /// Wait until the files we must replace are free. If another program keeps them locked, tell the
 /// user which one and let them close it and retry, or force close it. Nothing is copied until
 /// everything is free, so a blocked update never leaves a half-updated app.
@@ -576,36 +607,25 @@ Future<(String?, int?)> _installedVersion(String appDir, String exe) async {
   return (null, null);
 }
 
-DateTime? _installedBuiltAt(String? stampPath) {
-  try {
-    if (stampPath == null) return null;
-    final f = File(stampPath);
-    if (!f.existsSync()) return null;
-    return DateTime.tryParse('${(jsonDecode(f.readAsStringSync()) as Map<String, dynamic>)['builtAt']}')?.toUtc();
-  } catch (_) {
-    return null;
-  }
-}
+/// How the published release compares with the installed app. Decided only by version.txt
+/// (versionName, then versionCode) against the installed app. Publish dates are never used.
+enum _Compare { newer, same, ahead, unknown }
 
-/// null = go ahead and update, otherwise the text to show because there is nothing newer.
-String? _upToDateReason({
+_Compare _compareInstalled({
   required String? installedVersion,
   required int? installedBuild,
-  required DateTime? installedBuiltAt,
   required String remoteVersion,
   required int? remoteBuild,
-  required DateTime remoteBuiltAt,
 }) {
-  if (installedVersion == null) return null; // cannot tell: let the user update
+  if (installedVersion == null) return _Compare.unknown; // cannot tell: let the user update
   final c = _compareVersions(remoteVersion, installedVersion);
-  if (c > 0) return null;
-  if (c < 0) return 'Your version (v$installedVersion) is newer than the published one (v$remoteVersion).';
+  if (c > 0) return _Compare.newer;
+  if (c < 0) return _Compare.ahead;
   if (installedBuild != null && remoteBuild != null) {
-    if (remoteBuild > installedBuild) return null;
-    if (remoteBuild < installedBuild) return 'Your build ($installedBuild) is newer than the published one ($remoteBuild).';
+    if (remoteBuild > installedBuild) return _Compare.newer;
+    if (remoteBuild < installedBuild) return _Compare.ahead;
   }
-  if (installedBuiltAt != null && remoteBuiltAt.isAfter(installedBuiltAt.add(const Duration(seconds: 30)))) return null; // same version, rebuilt
-  return 'You already have the latest version (v$installedVersion).';
+  return _Compare.same;
 }
 
 /// Plain message box (or console line when no dialog tool exists).
@@ -849,18 +869,30 @@ Future<void> _standalone(Map<String, String> a) async {
     // 3. Is there anything newer than what is installed?
     final remoteCode = int.tryParse(RegExp(r'^\s*versionCode\s*=\s*(\d+)', multiLine: true).firstMatch(versionText)?.group(1) ?? '');
     final (installedV, installedCode) = await _installedVersion(appDir, exe);
-    final reason = _upToDateReason(
+    final cmp = _compareInstalled(
       installedVersion: installedV,
       installedBuild: installedCode,
-      installedBuiltAt: _installedBuiltAt(stampPath),
       remoteVersion: version,
       remoteBuild: remoteCode,
-      remoteBuiltAt: DateTime.tryParse('${asset['updated_at'] ?? ''}')?.toUtc() ?? DateTime.now().toUtc(),
     );
-    if (reason != null && !a.containsKey('force-update')) {
-      _say(reason);
-      await _notify(title, '$reason\n\nNo update is needed. (To reinstall anyway, start the updater with --force-update 1.)');
-      return;
+    if (!a.containsKey('force-update')) {
+      if (cmp == _Compare.ahead) {
+        final msg = 'Your version (v$installedV) is newer than the published one (v$version).';
+        _say(msg);
+        await _notify(title, '$msg\n\nNo update is needed.');
+        return;
+      }
+      if (cmp == _Compare.same) {
+        _say('same version (v$installedV), asking to reinstall');
+        final again = await _confirm(
+          title,
+          'You already have the latest version (v$installedV).\n\nDo you want to reinstall it anyway?',
+        );
+        if (!again) {
+          _say('reinstall declined');
+          return;
+        }
+      }
     }
 
     // 4. Download.
