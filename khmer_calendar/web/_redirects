@@ -1,1 +1,4 @@
-/*    /index.html   200
+# SPA fallback is handled by wrangler.toml:
+#   [assets] not_found_handling = "single-page-application"
+# Do not add "/* /index.html 200" here — Cloudflare reports an infinite
+# redirect loop (code 100324) when both are present.
