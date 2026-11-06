@@ -27,6 +27,7 @@ std::wstring ExePath() {
   return std::wstring(buf);
 }
 
+// Single launch command: one Run-key entry with --autostart (background only).
 std::wstring CommandLineFor(const std::wstring& exe) {
   return L"\"" + exe + L"\" --autostart";
 }
@@ -141,38 +142,7 @@ std::wstring ShortcutPath() {
   return dir;
 }
 
-bool WriteShortcut(const std::wstring& exe) {
-  std::wstring dest = ShortcutPath();
-  if (dest.empty() || exe.empty()) {
-    return false;
-  }
-  IShellLinkW* link = nullptr;
-  HRESULT hr =
-      CoCreateInstance(CLSID_ShellLink, nullptr, CLSCTX_INPROC_SERVER,
-                       IID_IShellLinkW, reinterpret_cast<void**>(&link));
-  if (FAILED(hr) || link == nullptr) {
-    return false;
-  }
-  link->SetPath(exe.c_str());
-  link->SetArguments(L"--autostart");
-  std::wstring dir = exe;
-  size_t slash = dir.find_last_of(L"\\/");
-  if (slash != std::wstring::npos) {
-    dir.resize(slash);
-    link->SetWorkingDirectory(dir.c_str());
-  }
-  link->SetDescription(L"Khmer Calendar");
-  IPersistFile* file = nullptr;
-  hr = link->QueryInterface(IID_IPersistFile, reinterpret_cast<void**>(&file));
-  bool ok = false;
-  if (SUCCEEDED(hr) && file != nullptr) {
-    ok = SUCCEEDED(file->Save(dest.c_str(), TRUE));
-    file->Release();
-  }
-  link->Release();
-  return ok;
-}
-
+// Remove legacy Startup-folder shortcut so only the Run key remains.
 bool RemoveShortcut() {
   std::wstring dest = ShortcutPath();
   if (dest.empty()) {
@@ -199,12 +169,15 @@ bool KhmerAutostartEnable() {
   if (exe.empty()) {
     return false;
   }
+  // Only the Run key — never both Run key and Startup folder (that caused
+  // the app to launch twice at sign-in).
   std::wstring cmd = CommandLineFor(exe);
   bool run = WriteSz(HKEY_CURRENT_USER, kRunKey, kValueName, cmd);
   WriteApprovedEnabled(HKEY_CURRENT_USER, kApprovedKey, kValueName);
-  WriteShortcut(exe);
-  WriteApprovedEnabled(HKEY_CURRENT_USER, kApprovedFolderKey, kShortcutName);
-  return run || ShortcutExists();
+  // Clean up any leftover dual-registration from older builds.
+  RemoveShortcut();
+  DeleteValue(HKEY_CURRENT_USER, kApprovedFolderKey, kShortcutName);
+  return run;
 }
 
 bool KhmerAutostartDisable() {
@@ -222,6 +195,7 @@ bool KhmerAutostartIsEnabled() {
       ApprovedEnabled(HKEY_CURRENT_USER, kApprovedKey, kValueName)) {
     return true;
   }
+  // Treat leftover shortcut as enabled only until the next enable/disable.
   if (ShortcutExists() &&
       ApprovedEnabled(HKEY_CURRENT_USER, kApprovedFolderKey, kShortcutName)) {
     return true;
