@@ -16,11 +16,11 @@ var _ready = false;
 var _bound = false;
 Timer? _syncDebounce;
 Timer? _webTick;
+Timer? _desktopTick;
 final _fired = <String>{};
 var _webShots = <ReminderShot>[];
+var _desktopShots = <ReminderShot>[];
 String _reminderSig = '';
-
-
 
 NotificationDetails _detailsFor(String channel) {
   final android = switch (channel) {
@@ -74,11 +74,19 @@ NotificationDetails _detailsFor(String channel) {
         icon: 'ic_stat_notify',
       ),
   };
+  // Windows needs its own details object; without it the plugin gets null and
+  // never shows a toast (common cause of "Windows can't send notification").
+  const windows = WindowsNotificationDetails(
+    duration: WindowsNotificationDuration.long,
+  );
   return NotificationDetails(
     android: android,
-    iOS: const DarwinNotificationDetails(presentAlert: true, presentBadge: true, presentSound: true),
-    macOS: const DarwinNotificationDetails(presentAlert: true, presentBadge: true, presentSound: true),
+    iOS: const DarwinNotificationDetails(
+        presentAlert: true, presentBadge: true, presentSound: true),
+    macOS: const DarwinNotificationDetails(
+        presentAlert: true, presentBadge: true, presentSound: true),
     linux: const LinuxNotificationDetails(),
+    windows: windows,
   );
 }
 
@@ -93,7 +101,8 @@ void bindReminderSync(AppStore store) {
       return;
     }
     _syncDebounce?.cancel();
-    _syncDebounce = Timer(const Duration(milliseconds: 400), () => syncReminders(store));
+    _syncDebounce =
+        Timer(const Duration(milliseconds: 400), () => syncReminders(store));
   });
 }
 
@@ -125,6 +134,7 @@ Future<void> initReminderEngine() async {
     const windows = WindowsInitializationSettings(
       appName: 'Khmer Calendar',
       appUserModelId: 'MounSokdara.KhmerCalendar',
+      // Stable GUID for the toast activator (must stay fixed across releases).
       guid: 'c4e8f1a2-9b7d-4c3e-8f16-2a91d05b6e44',
     );
     const settings = InitializationSettings(
@@ -135,7 +145,9 @@ Future<void> initReminderEngine() async {
       windows: windows,
     );
     await _plugin.initialize(settings);
-    final androidPlugin = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    final androidPlugin = _plugin
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
     await androidPlugin?.createNotificationChannel(
       const AndroidNotificationChannel(
         'khmer_reminders',
@@ -155,7 +167,8 @@ Future<bool> requestOsNotificationPermission() async {
   await initReminderEngine();
   var ok = false;
   try {
-    final android = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
     final a = await android?.requestNotificationsPermission();
     if (a == true) ok = true;
     try {
@@ -165,20 +178,26 @@ Future<bool> requestOsNotificationPermission() async {
     debugPrint('android notify request: $e');
   }
   try {
-    final ios = _plugin.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
-    final i = await ios?.requestPermissions(alert: true, badge: true, sound: true);
+    final ios = _plugin
+        .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin>();
+    final i =
+        await ios?.requestPermissions(alert: true, badge: true, sound: true);
     if (i == true) ok = true;
   } catch (e) {
     debugPrint('ios notify request: $e');
   }
   try {
-    final mac = _plugin.resolvePlatformSpecificImplementation<MacOSFlutterLocalNotificationsPlugin>();
-    final m = await mac?.requestPermissions(alert: true, badge: true, sound: true);
+    final mac = _plugin.resolvePlatformSpecificImplementation<
+        MacOSFlutterLocalNotificationsPlugin>();
+    final m =
+        await mac?.requestPermissions(alert: true, badge: true, sound: true);
     if (m == true) ok = true;
   } catch (e) {
     debugPrint('mac notify request: $e');
   }
-  if (defaultTargetPlatform == TargetPlatform.linux || defaultTargetPlatform == TargetPlatform.windows) {
+  if (defaultTargetPlatform == TargetPlatform.linux ||
+      defaultTargetPlatform == TargetPlatform.windows) {
     ok = ok || _ready;
   }
   return ok;
@@ -189,6 +208,10 @@ Future<void> cancelAllReminders() async {
   _webTick?.cancel();
   _webTick = null;
   _webShots = [];
+  _desktopTick?.cancel();
+  _desktopTick = null;
+  _desktopShots = [];
+  _fired.clear();
   if (!_ready || kIsWeb) return;
   try {
     await _plugin.cancelAll();
@@ -227,16 +250,61 @@ void _armWeb(List<ReminderShot> shots) {
   _fireWebDue();
 }
 
+/// Desktop fallback: while the process is alive (UI or --autostart), fire due
+/// reminders with show() so Windows/Linux still notify even if the OS scheduler
+/// drops unpackaged toasts.
+void _fireDesktopDue() {
+  if (!_ready || kIsWeb) return;
+  final now = DateTime.now();
+  final todayStart = DateTime(now.year, now.month, now.day);
+  for (final p in _desktopShots) {
+    if (_fired.contains(p.key)) continue;
+    if (p.when.isAfter(now.add(const Duration(seconds: 15)))) continue;
+    if (p.when.isBefore(todayStart.subtract(const Duration(hours: 1)))) continue;
+    _fired.add(p.key);
+    final body = p.resolveBody();
+    unawaited(_plugin
+        .show(
+          p.key.hashCode & 0x7fffffff,
+          p.title,
+          body,
+          _detailsFor(p.channel),
+        )
+        .catchError((Object e) {
+      debugPrint('desktop show ${p.key}: $e');
+    }));
+  }
+}
+
+void _armDesktop(List<ReminderShot> shots) {
+  _desktopShots = shots;
+  _desktopTick?.cancel();
+  _desktopTick =
+      Timer.periodic(const Duration(seconds: 20), (_) => _fireDesktopDue());
+  _fireDesktopDue();
+}
+
 Future<void> _scheduleNative(ReminderShot shot, int id, bool exact) async {
   if (shot.when.isBefore(DateTime.now())) return;
   final when = tz.TZDateTime.from(shot.when, tz.local);
   final body = shot.resolveBody();
+  final details = _detailsFor(shot.channel);
+
   Future<void> run(AndroidScheduleMode mode) {
-    return _plugin.zonedSchedule(id, shot.title, body, when, _detailsFor(shot.channel), androidScheduleMode: mode);
+    return _plugin.zonedSchedule(
+      id,
+      shot.title,
+      body,
+      when,
+      details,
+      androidScheduleMode: mode,
+    );
   }
 
   try {
-    await run(exact ? AndroidScheduleMode.exactAllowWhileIdle : AndroidScheduleMode.inexactAllowWhileIdle);
+    await run(exact
+        ? AndroidScheduleMode.exactAllowWhileIdle
+        : AndroidScheduleMode.inexactAllowWhileIdle);
   } catch (err) {
     debugPrint('schedule $id: $err');
     if (exact) {
@@ -254,12 +322,19 @@ String _reminderSignature(AppStore store) =>
 
 List<ReminderShot> _pluginPending(List<ReminderShot> shots) {
   final now = DateTime.now();
-  final future = shots.where((s) => s.when.isAfter(now)).toList()..sort((a, b) => a.when.compareTo(b.when));
+  final future = shots.where((s) => s.when.isAfter(now)).toList()
+    ..sort((a, b) => a.when.compareTo(b.when));
   if (defaultTargetPlatform != TargetPlatform.iOS) return future;
   const iosPendingCap = 60;
   if (future.length <= iosPendingCap) return future;
   return future.sublist(0, iosPendingCap);
 }
+
+bool get _isDesktop =>
+    !kIsWeb &&
+    (defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux ||
+        defaultTargetPlatform == TargetPlatform.macOS);
 
 Future<void> syncReminders(AppStore store) async {
   if (!_ready) {
@@ -286,5 +361,11 @@ Future<void> syncReminders(AppStore store) async {
   var id = 1;
   for (final shot in _pluginPending(shots)) {
     await _scheduleNative(shot, id++, store.backgroundOn);
+  }
+  // Keep a local timer on desktop so reminders still fire while the process
+  // is alive (windowed or --autostart), which is more reliable on unpackaged
+  // Windows builds.
+  if (_isDesktop) {
+    _armDesktop(shots);
   }
 }
