@@ -68,10 +68,28 @@ void _say(File log, String msg) {
   } catch (_) {}
 }
 
+// Held for the life of the process so the OS lock is not released early.
+RandomAccessFile? _winLock;
+
 bool _acquireLock(File log) {
   final lockPath =
       '${Directory.systemTemp.path}${Platform.pathSeparator}$_lockName';
   final lock = File(lockPath);
+  if (Platform.isWindows) {
+    // This exe runs as a GUI-subsystem (windowless) process, so spawning
+    // console tools like `tasklist` would flash a cmd window. Use a
+    // non-blocking OS file lock instead.
+    try {
+      _winLock = lock.openSync(mode: FileMode.append);
+      _winLock!.lockSync(FileLock.exclusive);
+      return true;
+    } on FileSystemException {
+      return false;
+    } catch (e) {
+      _say(log, 'lock: $e');
+      return true;
+    }
+  }
   try {
     if (lock.existsSync()) {
       final old = lock.readAsStringSync().trim();
