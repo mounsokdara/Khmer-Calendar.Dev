@@ -29,7 +29,6 @@ std::string DirOf(const std::string& path) {
   return path.substr(0, slash);
 }
 
-// Prefer dedicated background binary next to the app.
 std::string BackgroundExec() {
   std::string exe = ExePath();
   if (exe.empty()) {
@@ -64,7 +63,6 @@ bool WriteDesktop() {
   g_mkdir_with_parents(folder, 0755);
   g_free(folder);
 
-  // TryExec should be the binary only (no args).
   std::string try_exec = exec_line;
   size_t space = try_exec.find(' ');
   if (space != std::string::npos) {
@@ -80,16 +78,12 @@ bool WriteDesktop() {
                                "ប្រតិទិនខ្មែរ (ផ្ទៃខាងក្រោយ)");
   g_key_file_set_string(kf, "Desktop Entry", "Comment",
                         "Background reminders for Khmer Calendar");
-  gchar* exec = g_strdup_printf("%s", exec_line.c_str());
-  // Quote path if it is a single path without args.
+  gchar* exec = nullptr;
   if (exec_line.find(' ') == std::string::npos) {
-    g_free(exec);
     exec = g_strdup_printf("\"%s\"", exec_line.c_str());
   } else {
-    // main --autostart fallback
     size_t sp = exec_line.find(' ');
     std::string bin = exec_line.substr(0, sp);
-    g_free(exec);
     exec = g_strdup_printf("\"%s\" --autostart", bin.c_str());
   }
   g_key_file_set_string(kf, "Desktop Entry", "Exec", exec);
@@ -147,6 +141,36 @@ bool DesktopEnabled() {
   return true;
 }
 
+bool EnsureRunning() {
+  std::string exe = ExePath();
+  if (exe.empty()) {
+    return false;
+  }
+  std::string dir = DirOf(exe);
+  std::string bg = dir + "/" + kBgName;
+  gchar* argv[4] = {nullptr, nullptr, nullptr, nullptr};
+  if (g_file_test(bg.c_str(), G_FILE_TEST_IS_EXECUTABLE)) {
+    argv[0] = g_strdup(bg.c_str());
+  } else {
+    argv[0] = g_strdup(exe.c_str());
+    argv[1] = g_strdup("--autostart");
+  }
+  g_autoptr(GError) error = nullptr;
+  gboolean ok = g_spawn_async(
+      dir.c_str(), argv, nullptr,
+      static_cast<GSpawnFlags>(G_SPAWN_DO_NOT_REAP_CHILD |
+                               G_SPAWN_SEARCH_PATH),
+      nullptr, nullptr, nullptr, &error);
+  for (int i = 0; argv[i] != nullptr; i++) {
+    g_free(argv[i]);
+  }
+  if (!ok) {
+    g_warning("ensureRunning failed: %s",
+              error != nullptr ? error->message : "unknown");
+  }
+  return ok == TRUE;
+}
+
 void RespondBool(FlMethodCall* call, bool value) {
   g_autoptr(FlValue) v = fl_value_new_bool(value);
   g_autoptr(FlMethodResponse) response =
@@ -172,6 +196,10 @@ void MethodCb(FlMethodChannel* /*channel*/, FlMethodCall* call,
   }
   if (g_strcmp0(method, "isEnabled") == 0) {
     RespondBool(call, DesktopEnabled());
+    return;
+  }
+  if (g_strcmp0(method, "ensureRunning") == 0) {
+    RespondBool(call, EnsureRunning());
     return;
   }
   g_autoptr(FlMethodResponse) response =

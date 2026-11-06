@@ -5,9 +5,6 @@ class MainFlutterWindow: NSWindow {
   private var autostartChannel: FlutterMethodChannel?
 
   override func awakeFromNib() {
-    // FlutterDartProject defaults dartEntrypointArguments to ProcessInfo
-    // arguments (without the binary name), so Dart main(List<String> args)
-    // already receives --autostart / --background when present.
     let flutterViewController = FlutterViewController()
 
     let windowFrame = self.frame
@@ -28,6 +25,8 @@ class MainFlutterWindow: NSWindow {
         result(KhmerAutostart.disable())
       case "isEnabled":
         result(KhmerAutostart.isEnabled())
+      case "ensureRunning":
+        result(KhmerAutostart.ensureRunning())
       default:
         result(FlutterMethodNotImplemented)
       }
@@ -37,7 +36,6 @@ class MainFlutterWindow: NSWindow {
     let background =
       args.contains("--autostart") || args.contains("--background")
     if background {
-      // Do not show the main window when launched as background service.
       self.orderOut(nil)
       self.isReleasedWhenClosed = false
     }

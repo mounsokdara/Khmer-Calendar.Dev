@@ -49,6 +49,30 @@ enum KhmerAutostart {
     return loginItemLegacyEnabled()
   }
 
+  /// Start the bg helper (or main --autostart) now.
+  static func ensureRunning() -> Bool {
+    let args: [String]
+    let launchPath: String
+    if let bg = backgroundHelperPath() {
+      launchPath = bg
+      args = []
+    } else {
+      launchPath = mainExecutablePath()
+      args = ["--autostart"]
+    }
+    let proc = Process()
+    proc.executableURL = URL(fileURLWithPath: launchPath)
+    proc.arguments = args
+    proc.standardOutput = FileHandle.nullDevice
+    proc.standardError = FileHandle.nullDevice
+    do {
+      try proc.run()
+      return true
+    } catch {
+      return false
+    }
+  }
+
   // MARK: - LaunchAgent (background-only)
 
   private static func agentPlistURL() -> URL {
@@ -61,7 +85,6 @@ enum KhmerAutostart {
     FileManager.default.fileExists(atPath: agentPlistURL().path)
   }
 
-  /// Path to the dedicated bg helper, or nil if missing.
   private static func backgroundHelperPath() -> String? {
     let macOSDir = Bundle.main.bundleURL
       .appendingPathComponent("Contents/MacOS", isDirectory: true)
@@ -69,7 +92,6 @@ enum KhmerAutostart {
     if FileManager.default.isExecutableFile(atPath: helper.path) {
       return helper.path
     }
-    // Next to the .app (e.g. unpacked dmg layout)
     let sibling = Bundle.main.bundleURL
       .deletingLastPathComponent()
       .appendingPathComponent("khmer-calendar-bg")
