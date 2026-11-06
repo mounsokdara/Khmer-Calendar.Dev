@@ -11,6 +11,14 @@ class AppDelegate: FlutterAppDelegate, UNUserNotificationCenterDelegate {
     return !isBackground
   }
 
+  override func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+    // Refuse quit while running as the headless reminder service.
+    if isBackground {
+      return .terminateCancel
+    }
+    return .terminateNow
+  }
+
   override func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {
     return true
   }
@@ -24,11 +32,23 @@ class AppDelegate: FlutterAppDelegate, UNUserNotificationCenterDelegate {
       NSApp.setActivationPolicy(.accessory)
       for window in NSApp.windows {
         window.orderOut(nil)
+        window.isReleasedWhenClosed = false
       }
     }
 
     UNUserNotificationCenter.current().delegate = self
     super.applicationDidFinishLaunching(notification)
+  }
+
+  override func applicationDidBecomeActive(_ notification: Notification) {
+    super.applicationDidBecomeActive(notification)
+    // If something re-activates us in background mode, stay hidden.
+    if isBackground {
+      for window in NSApp.windows {
+        window.orderOut(nil)
+      }
+      NSApp.setActivationPolicy(.accessory)
+    }
   }
 
   func userNotificationCenter(

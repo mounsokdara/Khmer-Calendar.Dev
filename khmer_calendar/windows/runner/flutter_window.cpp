@@ -54,7 +54,14 @@ bool FlutterWindow::OnCreate() {
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
   if (background_) {
-    ShowWindow(GetHandle(), SW_HIDE);
+    // Hidden tool-style window: no taskbar entry, never shown.
+    HWND hwnd = GetHandle();
+    if (hwnd != nullptr) {
+      LONG_PTR ex = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
+      SetWindowLongPtr(hwnd, GWL_EXSTYLE,
+                       ex | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE);
+      ShowWindow(hwnd, SW_HIDE);
+    }
   } else {
     flutter_controller_->engine()->SetNextFrameCallback([&]() {
       this->Show();
@@ -78,6 +85,14 @@ LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
+  // Background service must stay alive. Ignore close requests so the hidden
+  // window (and the Dart while(true) reminder loop) keep running.
+  if (background_ && (message == WM_CLOSE || message == WM_QUIT)) {
+    if (message == WM_CLOSE) {
+      return 0;
+    }
+  }
+
   if (flutter_controller_) {
     std::optional<LRESULT> result =
         flutter_controller_->HandleTopLevelWindowProc(hwnd, message, wparam,

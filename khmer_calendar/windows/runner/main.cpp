@@ -20,7 +20,7 @@ bool HasAutostartArg(const std::vector<std::string>& args) {
   return false;
 }
 
-// One background instance at a time. A second --autostart exit immediately.
+// One background instance at a time. A second --autostart exits immediately.
 // A normal (UI) launch can still start; the mutex is only for background.
 HANDLE g_bg_mutex = nullptr;
 
@@ -49,8 +49,13 @@ void ReleaseBackgroundMutex() {
 
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                       _In_ wchar_t *command_line, _In_ int show_command) {
-  if (!::AttachConsole(ATTACH_PARENT_PROCESS) && ::IsDebuggerPresent()) {
-    CreateAndAttachConsole();
+  // Background service must never attach a console.
+  const std::vector<std::string> early_args = GetCommandLineArguments();
+  const bool background_early = HasAutostartArg(early_args);
+  if (!background_early) {
+    if (!::AttachConsole(ATTACH_PARENT_PROCESS) && ::IsDebuggerPresent()) {
+      CreateAndAttachConsole();
+    }
   }
 
   ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);

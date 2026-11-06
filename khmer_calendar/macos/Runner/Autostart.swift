@@ -118,11 +118,13 @@ enum KhmerAutostart {
     } else {
       programArgs = [mainExecutablePath(), "--autostart"]
     }
+    // KeepAlive: if the process exits unexpectedly, launchd starts it again
+    // so reminders stay registered.
     let plist: [String: Any] = [
       "Label": agentLabel,
       "ProgramArguments": programArgs,
       "RunAtLoad": true,
-      "KeepAlive": false,
+      "KeepAlive": true,
       "ProcessType": "Background",
       "LimitLoadToSessionType": "Aqua",
     ]
