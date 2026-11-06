@@ -11,8 +11,8 @@
 - Changelog inside the app (About > Changelog): shows the release notes, works offline with a saved copy
 
 ## Bug fixes:
-- (none in this release)
-
+- Fixed Notification Dosent work on PC (Not Confirmed yet: WIndows, Mac, Linux)
+- Fixed Background Dosent work on PC (Not Confirmed yet: WIndows, Mac, Linux)
 ## Improvements:
 - Month navigation with mouse and trackpad feels more natural on desktop
 - Clear Data is now more helpful
