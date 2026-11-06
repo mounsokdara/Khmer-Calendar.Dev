@@ -4,8 +4,11 @@ import UserNotifications
 
 @main
 class AppDelegate: FlutterAppDelegate, UNUserNotificationCenterDelegate {
+  private var isBackground = false
+
   override func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-    return false
+    // Background service must stay alive with no visible window.
+    return !isBackground
   }
 
   override func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {
@@ -13,6 +16,17 @@ class AppDelegate: FlutterAppDelegate, UNUserNotificationCenterDelegate {
   }
 
   override func applicationDidFinishLaunching(_ notification: Notification) {
+    let args = ProcessInfo.processInfo.arguments
+    isBackground = args.contains("--autostart") || args.contains("--background")
+
+    if isBackground {
+      // Accessory: no dock icon, no menu bar focus — pure background service.
+      NSApp.setActivationPolicy(.accessory)
+      for window in NSApp.windows {
+        window.orderOut(nil)
+      }
+    }
+
     UNUserNotificationCenter.current().delegate = self
     super.applicationDidFinishLaunching(notification)
   }

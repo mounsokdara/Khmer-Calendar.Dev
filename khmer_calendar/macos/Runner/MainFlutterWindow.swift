@@ -29,6 +29,14 @@ class MainFlutterWindow: NSWindow {
       }
     }
 
+    let args = ProcessInfo.processInfo.arguments
+    let background = args.contains("--autostart") || args.contains("--background")
+    if background {
+      // Do not show the main window when launched as background service.
+      self.orderOut(nil)
+      self.isReleasedWhenClosed = false
+    }
+
     super.awakeFromNib()
   }
 }

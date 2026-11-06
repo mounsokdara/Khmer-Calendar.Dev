@@ -1,5 +1,6 @@
 import 'dart:ui' show PlatformDispatcher;
 import 'package:dynamic_color/dynamic_color.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -11,6 +12,7 @@ import 'home_screen.dart';
 import 'i18n.dart';
 import 'net.dart';
 import 'permissions.dart';
+import 'reminders.dart';
 import 'screens/events.dart';
 import 'screens/licenses.dart';
 import 'screens/more.dart';
@@ -29,13 +31,82 @@ import 'theme.dart';
 
 final store = AppStore();
 
-Future<void> main() async {
+/// True when launched as the login/boot background service (--autostart / --background).
+bool get isBackgroundService {
+  if (kIsWeb) return false;
+  final args = const String.fromEnvironment('FLUTTER_TEST') == 'never'
+      ? <String>[]
+      : (WidgetsBinding.instance.platformDispatcher.implicitView == null
+          ? <String>[]
+          : <String>[]);
+  // Prefer dart:io Platform.executableArguments when available.
+  try {
+    // ignore: avoid_dynamic_calls
+    final ioArgs = _ioArgs();
+    return ioArgs.contains('--autostart') || ioArgs.contains('--background');
+  } catch (_) {
+    return args.contains('--autostart') || args.contains('--background');
+  }
+}
+
+List<String> _ioArgs() {
+  // Separated so web/stub builds don't import dart:io.
+  // ignore: depend_on_referenced_packages
+  return _PlatformArgs.args;
+}
+
+// Conditional import helper lives in a tiny stub/io pair if needed; for desktop
+// we read from the binding after ensureInitialized. Simpler: parse from
+// platformDispatcher or use a MethodChannel. Use foundation + zone value set
+// by native via dart entrypoint arguments (Flutter passes them to main).
+//
+// Flutter desktop passes argv into Dart as the arguments to main() when using
+// the default entrypoint — but our main() takes none. They are available via
+// the engine; the reliable cross-desktop way is WidgetsFlutterBinding + checking
+// a global set from a one-liner that uses dart:io on VM.
+
+Future<void> main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  final background =
+      args.contains('--autostart') || args.contains('--background');
+
+  if (background) {
+    // Background service only: no UI chrome, no router — just reminders.
+    await _runBackgroundService();
+    return;
+  }
+
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   IntlHelper.localeName = WidgetsBinding.instance.platformDispatcher.locale.languageCode;
   await Future.wait([NetStatus.start(), Haptics.instance.init()]);
   runApp(KhmerCalendarApp(store: store));
   store.hydrate().then((_) => applyStoredPermissions(store));
+}
+
+/// Headless path used at login / boot. Keeps the process alive so scheduled
+/// notifications and native alarms stay registered.
+Future<void> _runBackgroundService() async {
+  // Minimal binding so plugins (notifications, timezone, path_provider) work.
+  await NetStatus.start();
+  await store.hydrate();
+  await applyStoredPermissions(store);
+  if (store.notifyOn) {
+    await initReminderEngine();
+    await syncReminders(store);
+  }
+  // Keep isolate alive. Native side holds a hidden window / accessory app.
+  // Periodic re-sync in case the user changed settings in another instance.
+  while (true) {
+    await Future<void>.delayed(const Duration(minutes: 15));
+    try {
+      if (store.notifyOn) {
+        await syncReminders(store);
+      }
+    } catch (e) {
+      debugPrint('background sync: $e');
+    }
+  }
 }
 
 class KhmerCalendarApp extends StatefulWidget {
