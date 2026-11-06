@@ -93,19 +93,17 @@ jobs:
             -name 'KhmerCalendar-*' -o \
             -name 'KhmerCalendar-Updater-*' \
           \) ! -name '*.idsig' -exec cp -t release-files {} +
+          # Portable universal Windows: one top-level KhmerCalendar.exe (no .cmd),
+          # plus x64/ and arm64/ app trees.
           if [ -f dist/windows-x64/KhmerCalendar-windows-x64.zip ] && [ -f dist/windows-arm64/KhmerCalendar-windows-arm64.zip ]; then
             mkdir -p u-win/x64 u-win/arm64
             unzip -q dist/windows-x64/KhmerCalendar-windows-x64.zip -d u-win/x64
             unzip -q dist/windows-arm64/KhmerCalendar-windows-arm64.zip -d u-win/arm64
-            cat > u-win/KhmerCalendar.cmd <<'LAUNCHER'
-          @echo off
-          setlocal
-          set "ARCH=%PROCESSOR_ARCHITECTURE%"
-          if /I "%PROCESSOR_ARCHITEW6432%"=="ARM64" set "ARCH=ARM64"
-          if /I "%ARCH%"=="ARM64" (set "DIR=arm64") else (set "DIR=x64")
-          start "" "%~dp0%DIR%\khmer_calendar.exe"
-          LAUNCHER
-            sed -i 's/$/\r/' u-win/KhmerCalendar.cmd
+            if [ -f dist/windows-portable-launcher/KhmerCalendar.exe ]; then
+              cp dist/windows-portable-launcher/KhmerCalendar.exe u-win/KhmerCalendar.exe
+            else
+              echo "::warning::windows portable launcher missing; universal zip will have no top-level exe"
+            fi
             (cd u-win && zip -qr ../release-files/KhmerCalendar-windows-universal.zip .)
           else
             echo "::warning::windows universal skipped (needs both the x64 and arm64 zips)"
@@ -151,8 +149,6 @@ jobs:
 
           NOTES_FILE=".github/release-body.md"
           echo "Publishing ${TAG} (target ${GITHUB_SHA})"
-          # GitHub's API sometimes answers 5xx (e.g. "HTTP 502") on release calls.
-          # Retry each call with a growing delay instead of failing the whole job.
           retry() {
             local n=1 max=5
             until "$@"; do
@@ -165,7 +161,6 @@ jobs:
               n=$((n + 1))
             done
           }
-          # Remove leftover drafts for this tag (e.g. a create that returned 502 but succeeded).
           drop_drafts() {
             local ids id
             ids=$(gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
@@ -185,8 +180,6 @@ jobs:
           if gh release view "$TAG" >/dev/null 2>&1; then
             retry gh release delete "$TAG" --yes --cleanup-tag
           fi
-          # Draft first, then upload the files one by one, then publish. A flaky call can
-          # no longer leave a half-published release behind.
           retry create_draft
           for f in release-files/*; do
             retry gh release upload "$TAG" "$f" --clobber
