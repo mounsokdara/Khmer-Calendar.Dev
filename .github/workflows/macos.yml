@@ -1,4 +1,5 @@
-# macOS: build once, then pack signed .dmg files. Each volume has the .app and update-macos.sh.
+# macOS: build once, then pack signed .dmg files. Each volume has the .app
+# (with khmer-calendar-bg helper) and update-macos.sh.
 name: macOS
 
 on:
@@ -25,6 +26,13 @@ jobs:
         working-directory: khmer_calendar
       - run: flutter build macos --release
         working-directory: khmer_calendar
+      - name: Install arch-independent background helper into the .app
+        run: |
+          APP=$(find khmer_calendar/build/macos -name "*.app" | head -1)
+          MACOS_DIR="$APP/Contents/MacOS"
+          # Shell script works on arm64 and x86_64 (dart compile exe is host-arch only).
+          cp tools/background/khmer-calendar-bg-macos.sh "$MACOS_DIR/khmer-calendar-bg"
+          chmod +x "$MACOS_DIR/khmer-calendar-bg"
       - name: Keep the universal app
         run: |
           APP=$(find khmer_calendar/build/macos -name "*.app" | head -1)

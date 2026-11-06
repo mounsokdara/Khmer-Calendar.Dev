@@ -65,6 +65,10 @@ jobs:
         run: |
           dart compile exe tools/updater/update.dart -o khmer_calendar/build/linux/${{ matrix.arch }}/release/bundle/update-linux-${{ matrix.arch }}
           chmod +x khmer_calendar/build/linux/${{ matrix.arch }}/release/bundle/update-linux-${{ matrix.arch }}
+      - name: Build background service into the package folder
+        run: |
+          dart compile exe tools/background/bg_service.dart -o khmer_calendar/build/linux/${{ matrix.arch }}/release/bundle/khmer-calendar-bg
+          chmod +x khmer_calendar/build/linux/${{ matrix.arch }}/release/bundle/khmer-calendar-bg
       - name: Pack linux
         run: |
           tar -C khmer_calendar/build/linux/${{ matrix.arch }}/release/bundle -czf KhmerCalendar-linux-${{ matrix.arch }}.tar.gz .
