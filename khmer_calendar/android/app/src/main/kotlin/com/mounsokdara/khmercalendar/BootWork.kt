@@ -7,13 +7,18 @@ object BootWork {
     fun run(context: Context) {
         val app = context.applicationContext
         try {
-            NotifyKit.ensureChannels(app)
-            SilNotify.rearm(app)
-            HolidayNotifies.rearm(app)
-            DailyDigestNotify.schedule(app)
+            app.getSystemService(NotificationManager::class.java)?.cancel(41)
+        } catch (_: Exception) {
+        }
+        try {
+            NotifyKit.sync(app)
+        } catch (_: Exception) {
+        }
+        try {
+            TodayWidgetProvider.refreshAll(app)
             MonthWidgetProvider.refreshAll(app)
-        } catch (e: Exception) {
-            // never crash the process on boot / startup
+            WeatherWidgetProvider.refreshAll(app)
+        } catch (_: Exception) {
         }
     }
 }
