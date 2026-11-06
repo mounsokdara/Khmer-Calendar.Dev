@@ -66,7 +66,8 @@ bool get _android {
 
 bool get _apple {
   if (kIsWeb) return false;
-  return defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS;
+  return defaultTargetPlatform == TargetPlatform.iOS ||
+      defaultTargetPlatform == TargetPlatform.macOS;
 }
 
 bool get _desktop {
@@ -81,6 +82,26 @@ Future<void> _syncNativeFlags(AppStore store) async {
     'background': store.backgroundOn,
     'autoLaunch': store.autoLaunchOn,
   });
+}
+
+/// Desktop: register login bg helper and start it when background mode is on.
+Future<void> _desktopBackgroundOn() async {
+  if (!_desktop) return;
+  try {
+    await autostart.enableDesktopAutostart();
+    await autostart.ensureDesktopBackgroundRunning();
+  } catch (e) {
+    debugPrint('desktop background on: $e');
+  }
+}
+
+Future<void> _desktopBackgroundOff() async {
+  if (!_desktop) return;
+  try {
+    await autostart.disableDesktopAutostart();
+  } catch (e) {
+    debugPrint('desktop background off: $e');
+  }
 }
 
 Future<void> _pause() async {
@@ -188,7 +209,6 @@ Future<void> _openSettingsFor(String kind) async {
   await wait;
 }
 
-
 Future<bool> promptIfDenied(
   AppStore store, {
   BuildContext? context,
@@ -204,7 +224,8 @@ Future<bool> promptIfDenied(
     barrierDismissible: false,
     builder: (d) => AlertDialog(
       title: Text(t(store.lang, 'permNotAllowed')),
-      content: Text('${t(store.lang, _kindTitleKey(kind))}\n\n${t(store.lang, 'permOpenSettingsBody')}'),
+      content: Text(
+          '${t(store.lang, _kindTitleKey(kind))}\n\n${t(store.lang, 'permOpenSettingsBody')}'),
       actions: equalDialogActions([
         OutlinedButton(
           onPressed: () => Navigator.pop(d, false),
@@ -233,7 +254,10 @@ Future<bool> notificationsAllowed() async {
     try {
       status = await Permission.notification.status;
     } catch (_) {}
-    return native || status.isGranted || status.isLimited || status.isProvisional;
+    return native ||
+        status.isGranted ||
+        status.isLimited ||
+        status.isProvisional;
   }
   try {
     final status = await Permission.notification.status;
@@ -267,8 +291,6 @@ Future<bool> autoLaunchAllowed() async {
       return false;
     }
   }
-
-
   if (_android) return true;
   return false;
 }
@@ -281,7 +303,6 @@ Future<bool> locationAllowed() async {
     return false;
   }
 }
-
 
 Future<OsPerms> readOsPermissions() async {
   final notify = await notificationsAllowed();
@@ -301,17 +322,17 @@ Future<OsPerms> readOsPermissions() async {
   );
 }
 
-
 Future<void> keepOnlyGranted(AppStore store) async {
   final os = await readOsPermissions();
   if (store.notifyOn && !os.notify) store.setNotifyOn(false);
   if (store.backgroundOn && !os.background) store.setBackgroundOn(false);
-  if (!_android && store.autoLaunchOn && !os.autoLaunch) store.setAutoLaunchOn(false);
+  if (!_android && store.autoLaunchOn && !os.autoLaunch) {
+    store.setAutoLaunchOn(false);
+  }
   if (store.locationOn && !os.location) store.setLocationOn(false);
   await _syncNativeFlags(store);
   if (!store.notifyOn) await cancelAllReminders();
 }
-
 
 Future<void> writeGrantedFlags(AppStore store) async {
   final os = await readOsPermissions();
@@ -326,7 +347,6 @@ Future<void> writeGrantedFlags(AppStore store) async {
     await cancelAllReminders();
   }
 }
-
 
 Future<bool> requestNotifications(AppStore store) async {
   try {
@@ -353,7 +373,6 @@ Future<bool> requestNotifications(AppStore store) async {
   return ok;
 }
 
-
 Future<bool> requestBackground(AppStore store, {BuildContext? context}) async {
   if (kIsWeb) {
     store.setBackgroundOn(false);
@@ -379,16 +398,25 @@ Future<bool> requestBackground(AppStore store, {BuildContext? context}) async {
   final ok = await backgroundAllowed();
   store.setBackgroundOn(ok);
   await _syncNativeFlags(store);
-  if (ok) await initReminderEngine();
+  if (ok) {
+    await initReminderEngine();
+    // Desktop: turn on login bg helper and start it now.
+    if (_desktop) {
+      store.setAutoLaunchOn(true);
+      await _desktopBackgroundOn();
+    }
+  }
   return ok;
 }
 
 Future<void> stopBackground(AppStore store) async {
   store.setBackgroundOn(false);
   await _syncNativeFlags(store);
+  if (_desktop) {
+    store.setAutoLaunchOn(false);
+    await _desktopBackgroundOff();
+  }
 }
-
-
 
 Future<bool> requestAutoLaunch(AppStore store, {BuildContext? context}) async {
   if (kIsWeb) {
@@ -401,7 +429,8 @@ Future<bool> requestAutoLaunch(AppStore store, {BuildContext? context}) async {
       if (s['oemAutoStart'] == true) {
         final ctx = context;
         if (ctx != null && ctx.mounted) {
-          final go = await _confirm(ctx, store.lang, 'autoLaunchConfirm', 'autoLaunchConfirmSub');
+          final go = await _confirm(
+              ctx, store.lang, 'autoLaunchConfirm', 'autoLaunchConfirmSub');
           if (!go) {
             store.setAutoLaunchOn(false);
             await _syncNativeFlags(store);
@@ -418,6 +447,7 @@ Future<bool> requestAutoLaunch(AppStore store, {BuildContext? context}) async {
     if (_desktop) {
       try {
         await autostart.enableDesktopAutostart();
+        await autostart.ensureDesktopBackgroundRunning();
       } catch (e) {
         debugPrint('desktop autostart: $e');
       }
@@ -456,14 +486,13 @@ Future<GpsResult> requestLocationPerm(AppStore store) async {
   return r;
 }
 
-
-
 Future<bool> requestAllPermissions(
   AppStore store, {
   BuildContext? context,
   void Function(String key)? onStep,
 }) async {
-  Future<bool> step(String asking, String kind, Future<void> Function() ask, Future<bool> Function() allowed) async {
+  Future<bool> step(String asking, String kind, Future<void> Function() ask,
+      Future<bool> Function() allowed) async {
     onStep?.call(asking);
     try {
       await ask();
@@ -481,7 +510,8 @@ Future<bool> requestAllPermissions(
     return ok;
   }
 
-  if (!await step('askingNotify', 'notify', () => requestNotifications(store), notificationsAllowed)) {
+  if (!await step('askingNotify', 'notify', () => requestNotifications(store),
+      notificationsAllowed)) {
     await writeGrantedFlags(store);
     return false;
   }
@@ -491,7 +521,8 @@ Future<bool> requestAllPermissions(
     'background',
     () async {
       final bgCtx = context;
-      await requestBackground(store, context: bgCtx != null && bgCtx.mounted ? bgCtx : null);
+      await requestBackground(
+          store, context: bgCtx != null && bgCtx.mounted ? bgCtx : null);
     },
     backgroundAllowed,
   )) {
@@ -503,7 +534,8 @@ Future<bool> requestAllPermissions(
     onStep?.call('askingAutoLaunch');
     try {
       final autoCtx = context;
-      await requestAutoLaunch(store, context: autoCtx != null && autoCtx.mounted ? autoCtx : null);
+      await requestAutoLaunch(
+          store, context: autoCtx != null && autoCtx.mounted ? autoCtx : null);
     } catch (e) {
       debugPrint('all/auto: $e');
     }
@@ -512,7 +544,8 @@ Future<bool> requestAllPermissions(
     'auto',
     () async {
       final autoCtx = context;
-      await requestAutoLaunch(store, context: autoCtx != null && autoCtx.mounted ? autoCtx : null);
+      await requestAutoLaunch(
+          store, context: autoCtx != null && autoCtx.mounted ? autoCtx : null);
     },
     autoLaunchAllowed,
   )) {
@@ -520,14 +553,14 @@ Future<bool> requestAllPermissions(
     return false;
   }
   await _pause();
-  if (!await step('askingLocation', 'location', () => requestLocationPerm(store), locationAllowed)) {
+  if (!await step('askingLocation', 'location', () => requestLocationPerm(store),
+      locationAllowed)) {
     await writeGrantedFlags(store);
     return false;
   }
   await writeGrantedFlags(store);
   return true;
 }
-
 
 Future<void> applyStoredPermissions(AppStore store) async {
   await keepOnlyGranted(store);
@@ -536,11 +569,15 @@ Future<void> applyStoredPermissions(AppStore store) async {
   warmNotifyLists();
   if (store.notifyOn) {
     await initReminderEngine();
-    Future<void>.delayed(const Duration(milliseconds: 120), () => syncReminders(store));
+    Future<void>.delayed(
+        const Duration(milliseconds: 120), () => syncReminders(store));
   }
-  if (store.autoLaunchOn && _desktop) {
+  // On every launch: if background (or auto-launch) is on, keep the login
+  // bg helper registered and make sure a headless instance can run.
+  if (_desktop && (store.backgroundOn || store.autoLaunchOn)) {
     try {
       await autostart.enableDesktopAutostart();
+      await autostart.ensureDesktopBackgroundRunning();
     } catch (_) {}
   }
 }
@@ -572,5 +609,6 @@ String permSnack(Lang lang, String kind, bool ok) {
 
 void showPermSnack(BuildContext context, Lang lang, String kind, bool ok) {
   if (!context.mounted) return;
-  SlideSnackBar.show(context, message: permSnack(lang, kind, ok), behavior: SnackBarBehavior.floating);
+  SlideSnackBar.show(context,
+      message: permSnack(lang, kind, ok), behavior: SnackBarBehavior.floating);
 }

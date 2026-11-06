@@ -19,3 +19,6 @@ Future<void> disableDesktopAutostart() async {
 }
 
 Future<bool> isDesktopAutostartEnabled() => _call('isEnabled');
+
+/// Start the dedicated background helper (or main --autostart) if needed.
+Future<bool> ensureDesktopBackgroundRunning() => _call('ensureRunning');
