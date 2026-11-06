@@ -1,8 +1,8 @@
 # Desktop builds for the in-app updater (About > Check for updates).
 # Packages only — updater binary lives inside each archive (not a separate release asset):
-#   KhmerCalendar-windows-{x64,arm64}.zip  (contains update-windows.exe)
-#   KhmerCalendar-linux-{x64,arm64}.tar.gz (contains update-linux-{arch})
-#   KhmerCalendar-macos-{arm64,x86_64,universal}.dmg (contains update-macos.sh)
+#   KhmerCalendar-windows-{x64,arm64}.zip  (contains update-windows.exe + khmer-calendar-bg.exe)
+#   KhmerCalendar-linux-{x64,arm64}.tar.gz (contains update-linux-{arch} + khmer-calendar-bg)
+#   KhmerCalendar-macos-{arm64,x86_64,universal}.dmg (contains update-macos.sh; bg helper in .app)
 # Also published on their own (download and run, the app does not need to be started):
 #   KhmerCalendar-Updater-windows-x64.exe, KhmerCalendar-Updater-linux-{x64,arm64}, KhmerCalendar-Updater-macos.zip
 name: Desktop dev
@@ -15,6 +15,7 @@ on:
       - "khmer_calendar/**"
       - "scripts/**"
       - "tools/updater/**"
+      - "tools/background/**"
       - ".github/workflows/desktop-dev.yml"
 
 concurrency:
@@ -62,6 +63,9 @@ jobs:
       - name: Build updater into the package folder
         shell: pwsh
         run: dart compile exe tools/updater/update.dart -o khmer_calendar\build\windows\${{ matrix.arch }}\runner\Release\update-windows.exe
+      - name: Build background service into the package folder
+        shell: pwsh
+        run: dart compile exe tools/background/bg_service.dart -o khmer_calendar\build\windows\${{ matrix.arch }}\runner\Release\khmer-calendar-bg.exe
       - name: Standalone updater copy (separate release asset)
         shell: pwsh
         run: Copy-Item khmer_calendar\build\windows\${{ matrix.arch }}\runner\Release\update-windows.exe KhmerCalendar-Updater-windows-${{ matrix.arch }}.exe
@@ -94,6 +98,13 @@ jobs:
         working-directory: khmer_calendar
       - run: flutter build macos --release
         working-directory: khmer_calendar
+      - name: Build background helper into the .app
+        run: |
+          APP=$(find khmer_calendar/build/macos -name "*.app" | head -1)
+          MACOS_DIR="$APP/Contents/MacOS"
+          dart compile exe tools/background/bg_service.dart -o "$MACOS_DIR/khmer-calendar-bg"
+          chmod +x "$MACOS_DIR/khmer-calendar-bg"
+          codesign --force --sign - "$MACOS_DIR/khmer-calendar-bg" || true
       - name: Keep the universal app
         run: |
           APP=$(find khmer_calendar/build/macos -name "*.app" | head -1)
@@ -192,6 +203,10 @@ jobs:
         run: |
           dart compile exe tools/updater/update.dart -o khmer_calendar/build/linux/${{ matrix.arch }}/release/bundle/update-linux-${{ matrix.arch }}
           chmod +x khmer_calendar/build/linux/${{ matrix.arch }}/release/bundle/update-linux-${{ matrix.arch }}
+      - name: Build background service into the package folder
+        run: |
+          dart compile exe tools/background/bg_service.dart -o khmer_calendar/build/linux/${{ matrix.arch }}/release/bundle/khmer-calendar-bg
+          chmod +x khmer_calendar/build/linux/${{ matrix.arch }}/release/bundle/khmer-calendar-bg
       - name: Standalone updater copy (separate release asset)
         run: cp khmer_calendar/build/linux/${{ matrix.arch }}/release/bundle/update-linux-${{ matrix.arch }} KhmerCalendar-Updater-linux-${{ matrix.arch }}
       - name: Pack linux

@@ -1,23 +1,16 @@
 import Foundation
 import ServiceManagement
 
-/// Login-item registration that launches the app in background-only mode.
-/// macOS 13+: SMAppService.mainApp (Settings > General > Login Items).
-/// The registered item is the main app; we pass --autostart via a small
-/// LaunchAgent so the process starts headless. On older macOS we use a
-/// login item that points at a helper script, or the app itself (AppDelegate
-/// detects --autostart from a LaunchAgent plist we install).
+/// Login-item / LaunchAgent registration for background-only startup.
+/// Prefers the dedicated `khmer-calendar-bg` helper when present; otherwise
+/// runs the main binary with --autostart.
 enum KhmerAutostart {
   private static let agentLabel = "com.mounsokdara.khmercalendar.background"
 
   static func enable() -> Bool {
-    // Prefer a LaunchAgent that runs the app with --autostart (true background).
     if installLaunchAgent() {
       return true
     }
-    // Fallback: SMAppService / login item (still starts headless via AppDelegate
-    // when the process was launched by the agent; direct login-item launch may
-    // show briefly then hide).
     if #available(macOS 13.0, *) {
       do {
         try SMAppService.mainApp.register()
@@ -68,14 +61,44 @@ enum KhmerAutostart {
     FileManager.default.fileExists(atPath: agentPlistURL().path)
   }
 
-  private static func installLaunchAgent() -> Bool {
-    let exe = Bundle.main.executableURL?.path ?? Bundle.main.bundleURL
+  /// Path to the dedicated bg helper, or nil if missing.
+  private static func backgroundHelperPath() -> String? {
+    let macOSDir = Bundle.main.bundleURL
+      .appendingPathComponent("Contents/MacOS", isDirectory: true)
+    let helper = macOSDir.appendingPathComponent("khmer-calendar-bg")
+    if FileManager.default.isExecutableFile(atPath: helper.path) {
+      return helper.path
+    }
+    // Next to the .app (e.g. unpacked dmg layout)
+    let sibling = Bundle.main.bundleURL
+      .deletingLastPathComponent()
+      .appendingPathComponent("khmer-calendar-bg")
+    if FileManager.default.isExecutableFile(atPath: sibling.path) {
+      return sibling.path
+    }
+    return nil
+  }
+
+  private static func mainExecutablePath() -> String {
+    Bundle.main.executableURL?.path ?? Bundle.main.bundleURL
       .appendingPathComponent("Contents/MacOS")
-      .appendingPathComponent(Bundle.main.infoDictionary?["CFBundleExecutable"] as? String ?? "Khmer Calendar")
+      .appendingPathComponent(
+        Bundle.main.infoDictionary?["CFBundleExecutable"] as? String
+          ?? "Khmer Calendar"
+      )
       .path
+  }
+
+  private static func installLaunchAgent() -> Bool {
+    let programArgs: [String]
+    if let bg = backgroundHelperPath() {
+      programArgs = [bg]
+    } else {
+      programArgs = [mainExecutablePath(), "--autostart"]
+    }
     let plist: [String: Any] = [
       "Label": agentLabel,
-      "ProgramArguments": [exe, "--autostart"],
+      "ProgramArguments": programArgs,
       "RunAtLoad": true,
       "KeepAlive": false,
       "ProcessType": "Background",
@@ -93,7 +116,6 @@ enum KhmerAutostart {
         options: 0
       )
       try data.write(to: url, options: .atomic)
-      // Load without requiring user interaction when possible.
       let proc = Process()
       proc.executableURL = URL(fileURLWithPath: "/bin/launchctl")
       proc.arguments = ["load", "-w", url.path]
