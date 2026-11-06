@@ -18,6 +18,7 @@ constexpr wchar_t kApprovedFolderKey[] =
 constexpr wchar_t kValueName[] = L"KhmerCalendar";
 constexpr wchar_t kShortcutName[] = L"Khmer Calendar.lnk";
 constexpr wchar_t kBgExeName[] = L"khmer-calendar-bg.exe";
+constexpr wchar_t kBgMutexName[] = L"Local\\KhmerCalendar.Background";
 
 std::wstring ExePath() {
   wchar_t buf[MAX_PATH] = {};
@@ -36,7 +37,6 @@ std::wstring DirOf(const std::wstring& path) {
   return path.substr(0, slash);
 }
 
-// Prefer dedicated background executable; fall back to main.exe --autostart.
 std::wstring BackgroundCommand() {
   std::wstring exe = ExePath();
   if (exe.empty()) {
@@ -178,6 +178,15 @@ bool ShortcutExists() {
   return GetFileAttributesW(dest.c_str()) != INVALID_FILE_ATTRIBUTES;
 }
 
+bool BackgroundAlreadyRunning() {
+  HANDLE m = OpenMutexW(SYNCHRONIZE, FALSE, kBgMutexName);
+  if (m == nullptr) {
+    return false;
+  }
+  CloseHandle(m);
+  return true;
+}
+
 }  // namespace
 
 bool KhmerAutostartEnable() {
@@ -212,4 +221,39 @@ bool KhmerAutostartIsEnabled() {
     return true;
   }
   return false;
+}
+
+bool KhmerAutostartEnsureRunning() {
+  if (BackgroundAlreadyRunning()) {
+    return true;
+  }
+  std::wstring exe = ExePath();
+  if (exe.empty()) {
+    return false;
+  }
+  std::wstring dir = DirOf(exe);
+  std::wstring bg = dir + L"\\" + kBgExeName;
+  std::wstring cmd;
+  std::wstring work = dir;
+  if (GetFileAttributesW(bg.c_str()) != INVALID_FILE_ATTRIBUTES) {
+    cmd = L"\"" + bg + L"\"";
+  } else {
+    cmd = L"\"" + exe + L"\" --autostart";
+  }
+  STARTUPINFOW si = {};
+  si.cb = sizeof(si);
+  si.dwFlags = STARTF_USESHOWWINDOW;
+  si.wShowWindow = SW_HIDE;
+  PROCESS_INFORMATION pi = {};
+  std::wstring mutable_cmd = cmd;
+  BOOL ok = CreateProcessW(
+      nullptr, mutable_cmd.data(), nullptr, nullptr, FALSE,
+      DETACHED_PROCESS | CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP, nullptr,
+      work.empty() ? nullptr : work.c_str(), &si, &pi);
+  if (!ok) {
+    return false;
+  }
+  CloseHandle(pi.hThread);
+  CloseHandle(pi.hProcess);
+  return true;
 }
