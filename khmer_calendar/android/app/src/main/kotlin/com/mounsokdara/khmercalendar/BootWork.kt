@@ -3,23 +3,17 @@ package com.mounsokdara.khmercalendar
 import android.app.NotificationManager
 import android.content.Context
 
-/** Shared work for process start (App Startup) and BOOT_COMPLETED. */
 object BootWork {
     fun run(context: Context) {
         val app = context.applicationContext
         try {
-            app.getSystemService(NotificationManager::class.java)?.cancel(41)
-        } catch (_: Exception) {
-        }
-        try {
-            NotifyKit.sync(app)
-        } catch (_: Exception) {
-        }
-        try {
-            TodayWidgetProvider.refreshAll(app)
+            NotifyKit.ensureChannels(app)
+            SilNotify.rearm(app)
+            HolidayNotifies.rearm(app)
+            DailyDigestNotify.schedule(app)
             MonthWidgetProvider.refreshAll(app)
-            WeatherWidgetProvider.refreshAll(app)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            // never crash the process on boot / startup
         }
     }
 }
