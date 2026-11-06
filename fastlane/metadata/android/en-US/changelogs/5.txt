@@ -8,3 +8,5 @@ Khmer Calendar 1.0.4
 - Improved widgets and About page
 - Vibration is only built into mobile and web builds
 - Per-ABI APKs (armeabi-v7a, arm64-v8a, x86_64) plus a universal APK
+- Fixed Notification Dosent work on PC (Not Confirmed yet: WIndows, Mac, Linux)
+- Fixed Background Dosent work on PC (Not Confirmed yet: WIndows, Mac, Linux)
