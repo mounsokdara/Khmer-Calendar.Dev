@@ -156,10 +156,13 @@ bool EnsureRunning() {
     argv[1] = g_strdup("--autostart");
   }
   g_autoptr(GError) error = nullptr;
+  // Silence output so nothing attaches a terminal when we spawn the helper.
   gboolean ok = g_spawn_async(
       dir.c_str(), argv, nullptr,
       static_cast<GSpawnFlags>(G_SPAWN_DO_NOT_REAP_CHILD |
-                               G_SPAWN_SEARCH_PATH),
+                               G_SPAWN_SEARCH_PATH |
+                               G_SPAWN_STDOUT_TO_DEV_NULL |
+                               G_SPAWN_STDERR_TO_DEV_NULL),
       nullptr, nullptr, nullptr, &error);
   for (int i = 0; argv[i] != nullptr; i++) {
     g_free(argv[i]);

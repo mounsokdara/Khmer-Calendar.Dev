@@ -113,11 +113,11 @@ static gboolean my_application_local_command_line(GApplication* application,
     return TRUE;
   }
 
-  // For background mode use a unique name so a second --autostart exits
-  // instead of opening another copy. Normal UI launches stay NON_UNIQUE.
+  // Keep the process alive in background mode even though no window is shown.
+  // Without this, GApplication auto-quits after a few seconds because there
+  // are no mapped windows, and the Dart while(true) loop never gets to run.
   if (self->background) {
-    // If another background instance already holds the bus name, quit quietly.
-    // G_APPLICATION_NON_UNIQUE was set at construct; we just activate once.
+    g_application_hold(application);
   }
 
   g_application_activate(application);
